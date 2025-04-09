@@ -13,6 +13,9 @@ download_zip() {
   local url="$1"
   local dir_name="$2"
   local out_path="$3"
+  local subfolder="$4"
+
+  original_dir=$(pwd)
 
   mkdir -p download
   cd download
@@ -30,15 +33,22 @@ download_zip() {
     rm "$dir_name.zip"
   fi
 
-  # copy built stuff
-  dest_path="../../$out_dir/$out_path"
+  if [ -n "$subfolder" ]; then
+    if [ -d "$subfolder" ]; then
+      cd "$subfolder"
+    else
+      echo "Subfolder $subfolder does not exist, ignoring."
+    fi
+  fi
+
+  dest_path="$original_dir/$out_dir/$out_path"
   mkdir -p "$dest_path"
 
-  echo "Copying $dir_name binaries to $dest_path"
+  echo "Copying files from $subfolder to $dest_path"
 
   find . -type f -exec cp {} "$dest_path" \;
 
-  cd ../..
+  cd "$original_dir"
 }
 
 build() {
@@ -88,12 +98,11 @@ build() {
 #   "ffmpeg" \
 #   "ffmpeg"
 
-## svpflow
-echo "Downloading SVPFlow libraries..."
-mkdir -p download/svpflow
-cd download/svpflow
-
-cd ../..
+download_zip \
+  "https://web.archive.org/web/20190322064557/http://www.svp-team.com/files/gpl/svpflow-4.2.0.142.zip" \
+  "svpflow" \
+  "svpflow" \
+  "svpflow-4.2.0.142/lib-linux"
 
 ## python for vapoursynth
 mkdir -p download/python
