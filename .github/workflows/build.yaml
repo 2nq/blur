@@ -245,19 +245,41 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          cp -r ci/out/* installer/dependencies/lib
+          mkdir -p appimage/lib
+          cp -r ci/out/* appimage/lib
 
-          curl -L https://aka.ms/vs/17/release/vc_redist.x64.exe -o installer/redist/vc_redist.x64.exe
+      - name: Download linuxdeploy (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          wget -c https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
 
-          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.gui_path }} installer/resources/blur.exe
-          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.cli_path }} installer/resources/blur-cli.exe
+      - name: Create AppDir (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+
+          # Copy your built application to AppDir
+          cp your_executable AppDir/usr/bin/
+
+          # Create a desktop file
+          echo "[Desktop Entry]
+          Name=YourApp
+          Exec=your_executable
+          Icon=your_app_icon
+          Type=Application
+          Categories=Utility;" > AppDir/usr/share/applications/your_app.desktop
+
+          # Copy your app icon
+          cp your_app_icon.png AppDir/usr/share/icons/hicolor/256x256/apps/your_app_icon.png
 
       - name: Build AppImage (Linux)
         if: runner.os == 'Linux'
-        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
-        with:
-          path: installer/setup.iss
-          options: /O+
+        run: |
+          export VERSION=$(git describe --tags --always)
+          ./linuxdeploy-x86_64.AppImage --appdir=AppDir --output=appimage
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
