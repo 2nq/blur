@@ -85,6 +85,7 @@ jobs:
       - name: Collect dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
+          sudo apt-get uninstall llvm-17
           sudo apt-get install -y llvm-15 libzimg-dev meson libxxhash-dev nasm libfftw3-dev
           cd ci
           bash build-dependencies-linux.sh
