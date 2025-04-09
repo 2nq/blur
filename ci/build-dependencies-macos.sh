@@ -231,7 +231,7 @@ ninja -C build
 PATH="/opt/homebrew/opt/llvm@12/bin:$PATH"
 
 ## akarin
-build "https://github.com/AkarinVS/vapoursynth-plugin.git" "--depth 1 --single-branch" "akarin" "
+build "https://github.com/Jaded-Encoding-Thaumaturgy/akarin-vapoursynth-plugin.git" "" "akarin" "
 meson build
 ninja -C build
 " "build" "vapoursynth-plugins"
