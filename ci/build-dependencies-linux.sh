@@ -108,7 +108,6 @@ sudo cp -r "$out_dir/ffmpeg-shared/bin/"* /usr/local/bin/
 sudo cp -r "$out_dir/ffmpeg-shared/lib/"* /usr/local/lib/
 sudo cp -r "$out_dir/ffmpeg-shared/include/"* /usr/local/include/
 sudo cp -r "$out_dir/ffmpeg-shared/man/"* /usr/local/man/
-sudo cp -r "$out_dir/ffmpeg-shared/doc/"* /usr/local/share/doc/
 
 mkdir -p $out_dir/ffmpeg
 cp $out_dir/ffmpeg-shared/bin/ffmpeg $out_dir/ffmpeg
