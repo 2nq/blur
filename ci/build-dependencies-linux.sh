@@ -113,7 +113,7 @@ rm -rf $out_dir/ffmpeg-shared
 download_archive \
   "https://web.archive.org/web/20190322064557/http://www.svp-team.com/files/gpl/svpflow-4.2.0.142.zip" \
   "svpflow" \
-  "svpflow" \
+  "vapoursynth-plugins" \
   "svpflow-4.2.0.142/lib-linux"
 
 ## python for vapoursynth
