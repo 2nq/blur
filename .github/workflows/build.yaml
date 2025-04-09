@@ -63,7 +63,7 @@ jobs:
       - name: Collect dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install python3 ffmpeg libass zimg imagemagick autoconf automake libtool pkg-config gcc ffmpeg llvm@12 meson xxhash vapoursynth fftw dylibbundler
+          brew install python3 ffmpeg libass zimg imagemagick autoconf automake libtool pkg-config gcc ffmpeg llvm@15 meson xxhash vapoursynth fftw dylibbundler
           cd ci
           bash build-dependencies-macos.sh
 
@@ -82,12 +82,19 @@ jobs:
           wget -q https://raw.githubusercontent.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan/master/models/rife-v4.26_ensembleFalse/flownet.param
           cd ../../
 
-      - name: Install LLVM and Clang
-        if: runner.os != 'Windows' && runner.os != 'Linux' # Skip on Windows and Linux
-        uses: KyleMayes/install-llvm-action@v2
-        with:
-          env: true
-          version: 17
+      - name: Collect dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y llvm-15 libzimg-dev meson
+          cd ci
+          bash build-dependencies-linux.sh
+
+      # - name: Install LLVM and Clang (Mac)
+      #   if: runner.os != 'Windows' && runner.os != 'Linux'
+      #   uses: KyleMayes/install-llvm-action@v2
+      #   with:
+      #     env: true
+      #     version: 17
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
@@ -232,6 +239,24 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           mv installer/output/blur-installer.exe installer/output/blur-Windows-Installer-x64.exe
+
+      - name: Copy AppImage requirements (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cp -r ci/out/* installer/dependencies/lib
+
+          curl -L https://aka.ms/vs/17/release/vc_redist.x64.exe -o installer/redist/vc_redist.x64.exe
+
+          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.gui_path }} installer/resources/blur.exe
+          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.cli_path }} installer/resources/blur-cli.exe
+
+      - name: Build AppImage (Linux)
+        if: runner.os == 'Linux'
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
+        with:
+          path: installer/setup.iss
+          options: /O+
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
