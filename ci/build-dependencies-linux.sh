@@ -2,12 +2,16 @@
 set -e
 
 out_dir=out
+out_build_dir=out-build
 
 echo "Building dependencies for Linux"
 
 # clean outputs every run
 rm -rf $out_dir
 mkdir -p $out_dir
+
+rm -rf $out_build_dir
+mkdir -p $out_build_dir
 
 download_archive() {
   local url="$1"
@@ -100,10 +104,12 @@ download_archive \
   "ffmpeg-shared" \
   "ffmpeg-master-latest-linux64-gpl-shared"
 
-sudo cp -r download/ffmpeg-shared /usr/local
+cp -r $out_dir/ffmpeg-shared $out_build_dir/ffmpeg-shared
+PATH="$PWD/$out_build_dir/ffmpeg-shared:$PATH"
+
 mkdir -p $out_dir/ffmpeg
-cp out/ffmpeg-shared/bin/ffmpeg out/ffmpeg
-rm -rf out/ffmpeg-shared
+cp $out_dir/ffmpeg-shared/bin/ffmpeg $out_dir/ffmpeg
+rm -rf $out_dir/ffmpeg-shared
 
 ## svpflow
 download_archive \
