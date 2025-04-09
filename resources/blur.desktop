@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Blur
+Comment=Blur Application
+Exec=blur
+Icon=blur
+Type=Application
+Categories=Utility;
+Terminal=false
