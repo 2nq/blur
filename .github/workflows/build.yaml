@@ -144,8 +144,8 @@ jobs:
             cli_binary="blur-cli-$configuration.exe"
             gui_binary="blur-$configuration.exe"
 
-            mv "$cli_source" "$cli_binary"
-            mv "$gui_source" "$gui_binary"
+            cp "$cli_source" "$cli_binary"
+            cp "$gui_source" "$gui_binary"
 
             gui_path="$gui_binary"
             cli_path="$cli_binary"
@@ -182,14 +182,14 @@ jobs:
             cli_binary="blur-cli-$configuration"
             gui_binary="blur-$configuration.dmg"
 
-            mv "$cli_source" "$cli_binary"
+            cp "$cli_source" "$cli_binary"
             tar -cvf "$cli_binary.tar.gz" "$cli_binary"
             cli_path="$cli_binary.tar.gz"
 
             brew install create-dmg
 
             mkdir source_folder
-            mv "$gui_source" source_folder
+            cp "$gui_source" source_folder
 
             create-dmg \
               --volname "Blur Installer" \
@@ -207,6 +207,8 @@ jobs:
 
           # Output for subsequent steps
           echo "build_dir=$build_dir" >> $GITHUB_OUTPUT
+          echo "cli_binary=$cli_binary" >> $GITHUB_OUTPUT
+          echo "gui_binary=$gui_binary" >> $GITHUB_OUTPUT
           echo "cli_path=$cli_path" >> $GITHUB_OUTPUT
           echo "gui_path=$gui_path" >> $GITHUB_OUTPUT
           echo "configuration=$configuration" >> $GITHUB_OUTPUT
@@ -219,8 +221,8 @@ jobs:
 
           curl -L https://aka.ms/vs/17/release/vc_redist.x64.exe -o installer/redist/vc_redist.x64.exe
 
-          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.gui_path }} installer/resources/blur.exe
-          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.cli_path }} installer/resources/blur-cli.exe
+          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.gui_binary }} installer/resources/blur.exe
+          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.cli_binary }} installer/resources/blur-cli.exe
 
       - name: Build installer (Windows)
         if: runner.os == 'Windows'
@@ -239,7 +241,7 @@ jobs:
         shell: bash
         run: |
           cd ci
-          ./build-appimage.sh "../${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.cli_path }}" "../${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.gui_path }}"
+          bash build-appimage.sh ../${{ steps.prep.outputs.build_dir }}/blur ../${{ steps.prep.outputs.build_dir }}/blur-cli
           cp Blur-*.AppImage Blur.AppImage
 
       - name: Upload Artifacts
