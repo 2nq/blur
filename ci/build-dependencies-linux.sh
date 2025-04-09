@@ -9,7 +9,7 @@ echo "Building dependencies for Linux"
 rm -rf $out_dir
 mkdir -p $out_dir
 
-download_zip() {
+download_archive() {
   local url="$1"
   local dir_name="$2"
   local out_path="$3"
@@ -28,9 +28,19 @@ download_zip() {
 
     echo "Downloading $dir_name"
 
-    wget -q "$url" -O "$dir_name.zip"
-    unzip "$dir_name.zip"
-    rm "$dir_name.zip"
+    if [[ "$url" == *.zip ]]; then
+      wget -q "$url" -O "$dir_name.zip"
+      unzip "$dir_name.zip"
+      rm "$dir_name.zip"
+    elif [[ "$url" == *.tar.xz ]]; then
+      wget -q "$url" -O "$dir_name.tar.xz"
+      tar -xf "$dir_name.tar.xz"
+      rm "$dir_name.tar.xz"
+    else
+      echo "Unsupported archive format: $url"
+      cd "$original_dir"
+      return 1
+    fi
   fi
 
   if [ -n "$subfolder" ]; then
@@ -93,7 +103,7 @@ build() {
 
 # downloads
 ## ffmpeg (shared) (for building bestsource) (libavutil in apt is outdated)
-download_zip \
+download_archive \
   "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl-shared.tar.xz" \
   "ffmpeg-shared" \
   "ffmpeg-shared"
@@ -103,7 +113,7 @@ mkdir -p $out_dir/ffmpeg
 cp download/ffmpeg-shared/bin/ffmpeg $out_dir/ffmpeg
 
 ## svpflow
-download_zip \
+download_archive \
   "https://web.archive.org/web/20190322064557/http://www.svp-team.com/files/gpl/svpflow-4.2.0.142.zip" \
   "svpflow" \
   "svpflow" \
