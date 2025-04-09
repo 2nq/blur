@@ -173,6 +173,9 @@ RenderCommandsResult Render::build_render_commands() {
 #if defined(__APPLE__)
 		                L"-a",
 		                std::format(L"macos_bundled={}", blur.used_installer ? L"true" : L"false"),
+#elif defined(__linux__)
+		                L"-a",
+		                std::format(L"linux_bundled={}", true ? L"true" : L"false"), // todo: fix used_installer on linux
 #endif
 #if defined(_WIN32)
 		                L"-a",

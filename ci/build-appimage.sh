@@ -25,14 +25,21 @@ cp ../resources/blur.png appimage/usr/share/icons/hicolor/256x256/apps/blur.png
 
 # copy shared libraries
 cp -r out/python/lib/* appimage/usr/lib
-cp out/vapoursynth-plugins/*.so appimage/usr/lib
+
+# copy vapoursynth plugins
+mkdir appimage/usr/bin/vapoursynth-plugins
+cp out/vapoursynth-plugins/*.so appimage/usr/bin/vapoursynth-plugins
 
 # copy additional binaries
 cp -r out/ffmpeg/* appimage/usr/bin/additional
 cp -r out/python/bin/* appimage/usr/bin/additional
 
 # copy vapoursynth scripts
-find ../src/vapoursynth/* -name "*.py" -exec cp --parents {} appimage/usr/bin/additional \;
+mkdir -p appimage/usr/bin/lib
+old_dir=$PWD
+cd ../src/vapoursynth
+find -name "*.py" -exec cp --parents {} ../../ci/appimage/usr/bin/lib/ \;
+cd $old_dir
 
 # set executable permissions for all binaries
 chmod +x appimage/usr/bin/*

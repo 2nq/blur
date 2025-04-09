@@ -17,16 +17,17 @@ if vars().get("macos_bundled") == "true":
             print("loading", dylib.name)
             core.std.LoadPlugin(path=str(dylib))
 
-# temp wip
-plugin_dir = Path("/home/me/Desktop/blur/ci/out/vapoursynth-plugins")
-ignored = {
-    "libbestsource.so",
-}
+if vars().get("linux_bundled") == "true":
+    # load plugins
+    plugin_dir = Path("../vapoursynth-plugins")
+    ignored = {
+        "libbestsource.so",
+    }
 
-for plugin in plugin_dir.glob("*.so"):
-    if plugin.name not in ignored:
-        print("loading", plugin.name)
-        core.std.LoadPlugin(path=str(plugin))
+    for dylib in plugin_dir.glob("*.so"):
+        if dylib.name not in ignored:
+            print("loading", dylib.name)
+            core.std.LoadPlugin(path=str(dylib))
 
 # add blur.py folder to path so it can reference scripts
 sys.path.insert(1, str(Path(__file__).parent))
