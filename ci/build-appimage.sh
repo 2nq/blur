@@ -47,5 +47,5 @@ chmod +x appimage/usr/bin/*
 [ -d appimage/usr/bin/additional ] && chmod +x appimage/usr/bin/additional/*
 
 # build the appimage
-export VERSION=$(git describe --tags --always)
+export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 ./linuxdeploy-x86_64.AppImage --appdir=appimage --output=appimage
