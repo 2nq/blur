@@ -174,6 +174,7 @@ ninja -C build
 
 ## akarin
 build "https://github.com/Jaded-Encoding-Thaumaturgy/akarin-vapoursynth-plugin.git" "" "akarin" "
+git checkout 689cba74e7c71caf808b6feaaba0a32981c1956f
 meson build
 ninja -C build
 " "build" "vapoursynth-plugins"
