@@ -11,7 +11,7 @@ mkdir -p appimage/usr/share/applications
 mkdir -p appimage/usr/share/icons/hicolor/256x256/apps
 
 # download linuxdeploy tool
-rm linuxdeploy-x86_64.AppImage
+rm -f linuxdeploy-x86_64.AppImage
 wget -c https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
 chmod +x linuxdeploy-x86_64.AppImage
 
