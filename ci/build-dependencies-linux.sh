@@ -92,12 +92,17 @@ build() {
 }
 
 # downloads
-## ffmpeg (static)
-# download_zip \
-#   "https://ffmpeg.martin-riedl.de/download/macos/arm64/1743700936_N-119137-g46762c8b82/ffmpeg.zip" \
-#   "ffmpeg" \
-#   "ffmpeg"
+## ffmpeg (shared) (for building bestsource) (libavutil in apt is outdated)
+download_zip \
+  "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl-shared.tar.xz" \
+  "ffmpeg-shared" \
+  "ffmpeg-shared"
 
+cp -r download/ffmpeg-shared /usr/local
+mkdir -p $out_dir/ffmpeg
+cp download/ffmpeg-shared/bin/ffmpeg $out_dir/ffmpeg
+
+## svpflow
 download_zip \
   "https://web.archive.org/web/20190322064557/http://www.svp-team.com/files/gpl/svpflow-4.2.0.142.zip" \
   "svpflow" \
