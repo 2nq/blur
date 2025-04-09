@@ -104,8 +104,7 @@ download_archive \
   "ffmpeg-shared" \
   "ffmpeg-master-latest-linux64-gpl-shared"
 
-cp -r $out_dir/ffmpeg-shared $out_build_dir/ffmpeg-shared
-PATH="$PWD/$out_build_dir/ffmpeg-shared:$PATH"
+sudo cp -r $out_dir/ffmpeg-shared/* /
 
 mkdir -p $out_dir/ffmpeg
 cp $out_dir/ffmpeg-shared/bin/ffmpeg $out_dir/ffmpeg
