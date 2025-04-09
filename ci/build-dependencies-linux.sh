@@ -2,16 +2,12 @@
 set -e
 
 out_dir=out
-out_build_dir=out-build
 
 echo "Building dependencies for Linux"
 
 # clean outputs every run
 rm -rf $out_dir
 mkdir -p $out_dir
-
-rm -rf $out_build_dir
-mkdir -p $out_build_dir
 
 download_archive() {
   local url="$1"
