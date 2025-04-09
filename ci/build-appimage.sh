@@ -12,12 +12,13 @@ mkdir -p appimage/usr/share/icons/hicolor/256x256/apps
 
 # download linuxdeploy tool
 rm -f linuxdeploy-x86_64.AppImage
-wget -c https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
 chmod +x linuxdeploy-x86_64.AppImage
 
-# copy main executables
-cp ../bin/Release/blur appimage/usr/bin
-cp ../bin/Release/blur-cli appimage/usr/bin
+# copy binaries from arguments
+for arg in "$@"; do
+  cp "$arg" appimage/usr/bin/
+done
 
 # copy desktop file and icon
 cp ../resources/blur.desktop appimage/usr/share/applications/blur.desktop
