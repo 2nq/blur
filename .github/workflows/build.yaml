@@ -123,6 +123,36 @@ jobs:
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
+      - name: Copy installer requirements (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cp -r ci/out/* installer/dependencies/lib
+
+          curl -L https://aka.ms/vs/17/release/vc_redist.x64.exe -o installer/redist/vc_redist.x64.exe
+
+          cp bin/${{ matrix.build-type }}/*.exe installer/resources
+
+      - name: Build installer (Windows)
+        if: runner.os == 'Windows'
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
+        with:
+          path: installer/setup.iss
+          options: /O+
+
+      - name: Rename Installer (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mv installer/output/blur-installer.exe installer/output/blur-Windows-Installer-x64.exe
+
+      - name: Create AppImage (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cd ci
+          bash build-appimage.sh "../bin/${{ matrix.build-type }}/blur" "../bin/${{ matrix.build-type }}/blur-cli"
+          cp Blur-*.AppImage Blur.AppImage
+
       - name: Prepare Binaries
         id: prep
         shell: bash
@@ -144,8 +174,8 @@ jobs:
             cli_binary="blur-cli-$configuration.exe"
             gui_binary="blur-$configuration.exe"
 
-            cp "$cli_source" "$cli_binary"
-            cp "$gui_source" "$gui_binary"
+            mv "$cli_source" "$cli_binary"
+            mv "$gui_source" "$gui_binary"
 
             gui_path="$gui_binary"
             cli_path="$cli_binary"
@@ -182,14 +212,14 @@ jobs:
             cli_binary="blur-cli-$configuration"
             gui_binary="blur-$configuration.dmg"
 
-            cp "$cli_source" "$cli_binary"
+            mv "$cli_source" "$cli_binary"
             tar -cvf "$cli_binary.tar.gz" "$cli_binary"
             cli_path="$cli_binary.tar.gz"
 
             brew install create-dmg
 
             mkdir source_folder
-            cp "$gui_source" source_folder
+            mv "$gui_source" source_folder
 
             create-dmg \
               --volname "Blur Installer" \
@@ -212,37 +242,6 @@ jobs:
           echo "cli_path=$cli_path" >> $GITHUB_OUTPUT
           echo "gui_path=$gui_path" >> $GITHUB_OUTPUT
           echo "configuration=$configuration" >> $GITHUB_OUTPUT
-
-      - name: Copy installer requirements (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          cp -r ci/out/* installer/dependencies/lib
-
-          curl -L https://aka.ms/vs/17/release/vc_redist.x64.exe -o installer/redist/vc_redist.x64.exe
-
-          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.gui_binary }} installer/resources/blur.exe
-          cp ${{ steps.prep.outputs.build_dir }}/${{ steps.prep.outputs.cli_binary }} installer/resources/blur-cli.exe
-
-      - name: Build installer (Windows)
-        if: runner.os == 'Windows'
-        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
-        with:
-          path: installer/setup.iss
-          options: /O+
-
-      - name: Rename Installer (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          mv installer/output/blur-installer.exe installer/output/blur-Windows-Installer-x64.exe
-
-      - name: Create AppImage (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          cd ci
-          bash build-appimage.sh ../${{ steps.prep.outputs.build_dir }}/blur ../${{ steps.prep.outputs.build_dir }}/blur-cli
-          cp Blur-*.AppImage Blur.AppImage
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
