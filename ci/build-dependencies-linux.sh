@@ -43,20 +43,12 @@ download_archive() {
     fi
   fi
 
-  if [ -n "$subfolder" ]; then
-    if [ -d "$subfolder" ]; then
-      cd "$subfolder"
-    else
-      echo "Subfolder $subfolder does not exist, ignoring."
-    fi
-  fi
-
   dest_path="$original_dir/$out_dir/$out_path"
   mkdir -p "$dest_path"
 
   echo "Copying files from $subfolder to $dest_path"
 
-  find . -type f -exec cp {} "$dest_path" \;
+  cp -r "${subfolder:=.}" "$dest_path"
 
   cd "$original_dir"
 }
@@ -106,9 +98,12 @@ build() {
 download_archive \
   "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl-shared.tar.xz" \
   "ffmpeg-shared" \
-  "ffmpeg-shared"
+  "ffmpeg-shared" \
+  "ffmpeg-master-latest-linux64-gpl-shared"
 
-cp -r download/ffmpeg-shared /usr/local
+ls download/ffmpeg-shared
+
+sudo cp -r download/ffmpeg-shared /usr/local
 mkdir -p $out_dir/ffmpeg
 cp download/ffmpeg-shared/bin/ffmpeg $out_dir/ffmpeg
 
