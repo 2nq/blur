@@ -44,7 +44,6 @@ download_archive() {
   fi
 
   dest_path="$original_dir/$out_dir/$out_path"
-  mkdir -p "$dest_path"
 
   echo "Copying files from $subfolder to $dest_path"
 
@@ -101,11 +100,10 @@ download_archive \
   "ffmpeg-shared" \
   "ffmpeg-master-latest-linux64-gpl-shared"
 
-ls download/ffmpeg-shared
-
 sudo cp -r download/ffmpeg-shared /usr/local
 mkdir -p $out_dir/ffmpeg
-cp download/ffmpeg-shared/bin/ffmpeg $out_dir/ffmpeg
+cp out/ffmpeg-shared/bin/ffmpeg out/ffmpeg
+rm -rf out/ffmpeg-shared
 
 ## svpflow
 download_archive \
