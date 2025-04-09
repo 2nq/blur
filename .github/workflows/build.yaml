@@ -85,7 +85,7 @@ jobs:
       - name: Collect dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get install -y llvm-15 libzimg-dev meson libxxhash-dev
+          sudo apt-get install -y llvm-15 libzimg-dev meson libxxhash-dev nasm
           cd ci
           bash build-dependencies-linux.sh
 
