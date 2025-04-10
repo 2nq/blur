@@ -103,11 +103,9 @@ download_archive \
 sudo cp -r "$out_dir/ffmpeg-shared/bin/"* /usr/local/bin/
 sudo cp -r "$out_dir/ffmpeg-shared/lib/"* /usr/local/lib/
 sudo cp -r "$out_dir/ffmpeg-shared/include/"* /usr/local/include/
-sudo cp -r "$out_dir/ffmpeg-shared/man/"* /usr/local/man/
 
 mkdir -p $out_dir/ffmpeg
 cp $out_dir/ffmpeg-shared/bin/ffmpeg $out_dir/ffmpeg
-rm -rf $out_dir/ffmpeg-shared
 
 ## svpflow
 download_archive \
@@ -168,6 +166,7 @@ ninja -C build
 " "build" "vapoursynth-plugins"
 
 ## akarin
+rm -rf build/akarin
 build "https://github.com/Jaded-Encoding-Thaumaturgy/akarin-vapoursynth-plugin.git" "" "akarin" "
 git checkout 689cba74e7c71caf808b6feaaba0a32981c1956f
 meson build

@@ -372,6 +372,7 @@ RenderResult Render::do_render(RenderCommands render_commands) {
 			bp::std_in < vspipe_stdout,
 			bp::std_out.null(),
 			// bp::std_err.null(),
+			env,
 			io_context
 #ifdef _WIN32
 			,
