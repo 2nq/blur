@@ -5,6 +5,8 @@ rm -rf appimage/
 
 # create appdir structure
 mkdir -p appimage/usr/bin
+mkdir -p appimage/usr/bin/ffmpeg
+mkdir -p appimage/usr/bin/vapoursynth
 mkdir -p appimage/usr/lib
 mkdir -p appimage/usr/share/applications
 mkdir -p appimage/usr/share/icons/hicolor/256x256/apps
@@ -31,8 +33,8 @@ mkdir appimage/usr/bin/vapoursynth-plugins
 cp out/vapoursynth-plugins/*.so appimage/usr/bin/vapoursynth-plugins
 
 # copy additional binaries
-cp -r out/ffmpeg/* appimage/usr/bin
-cp -r out/python/bin/* appimage/usr/bin
+cp -r out/ffmpeg/* appimage/usr/bin/ffmpeg
+cp -r out/vapoursynth/* appimage/usr/bin/vapoursynth
 
 # copy vapoursynth scripts
 mkdir -p appimage/usr/bin/lib
@@ -43,6 +45,8 @@ cd $old_dir
 
 # set executable permissions for all binaries
 chmod +x appimage/usr/bin/*
+chmod +x appimage/usr/bin/ffmpeg*
+chmod +x appimage/usr/bin/vapoursynth*
 
 # build the appimage
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH

@@ -27,8 +27,8 @@ Blur::InitialisationResponse Blur::initialise(bool _verbose, bool _using_preview
 	used_installer = std::filesystem::exists(resources_path / "lib\\vapoursynth\\vspipe.exe") &&
 	                 std::filesystem::exists(resources_path / "lib\\ffmpeg\\ffmpeg.exe");
 #elif defined(__linux__)
-	// todo
-	used_installer = false;
+	used_installer = std::filesystem::exists(resources_path / "vapoursynth/vspipe") &&
+	                 std::filesystem::exists(resources_path / "ffmpeg/ffmpeg");
 #elif defined(__APPLE__)
 	used_installer = std::filesystem::exists(resources_path / "vapoursynth/vspipe") &&
 	                 std::filesystem::exists(resources_path / "ffmpeg/ffmpeg");
