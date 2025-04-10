@@ -265,6 +265,14 @@ std::filesystem::path u::get_settings_path() {
 u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 	namespace bp = boost::process;
 
+	bp::environment env = boost::this_process::environment();
+
+	if (blur.used_installer) {
+#ifdef __linux__
+		env["LD_LIBRARY_PATH"] = (blur.resources_path / "../lib").string();
+#endif
+	}
+
 	bp::ipstream pipe_stream;
 	bp::child c(
 		blur.ffprobe_path.wstring(),
@@ -356,6 +364,14 @@ std::vector<u::EncodingDevice> u::get_hardware_encoding_devices() {
 	else
 		init_hw = true;
 
+	bp::environment env = boost::this_process::environment();
+
+	if (blur.used_installer) {
+#ifdef __linux__
+		env["LD_LIBRARY_PATH"] = (blur.resources_path / "../lib").string();
+#endif
+	}
+
 	// First check available hardware acceleration methods
 	bp::ipstream pipe_stream;
 	bp::child c(
@@ -365,7 +381,8 @@ std::vector<u::EncodingDevice> u::get_hardware_encoding_devices() {
 		"-hide_banner",
 		"-hwaccels",
 		bp::std_out > pipe_stream,
-		bp::std_err > bp::null
+		bp::std_err > bp::null,
+		env
 #ifdef _WIN32
 		,
 		bp::windows::create_no_window
