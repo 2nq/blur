@@ -341,15 +341,15 @@ RenderResult Render::do_render(RenderCommands render_commands) {
 
 		bp::environment env = boost::this_process::environment();
 
-#if defined(__APPLE__)
 		if (blur.used_installer) {
+#if defined(__APPLE__)
 			env["PYTHONHOME"] = (blur.resources_path / "python").string();
 			env["PYTHONPATH"] = (blur.resources_path / "python/lib/python3.12/site-packages").string();
-		}
 #elif defined(__linux__)
-		env["LD_LIBRARY_PATH"] = "/home/me/Desktop/blur/ci/out/vapoursynth-plugins";
-		env["PYTHONPATH"] = "/home/me/Desktop/blur/ci/out/python/lib/python3.12/site-packages";
+			env["LD_LIBRARY_PATH"] = (blur.resources_path / "../lib").string();
+			env["PYTHONPATH"] = (blur.resources_path / "../lib/python3.12/site-packages").string();
 #endif
+		}
 
 		// Launch vspipe process
 		bp::child vspipe_process(
