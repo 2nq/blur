@@ -34,6 +34,8 @@ Blur::InitialisationResponse Blur::initialise(bool _verbose, bool _using_preview
 	                 std::filesystem::exists(resources_path / "ffmpeg/ffmpeg");
 #endif
 
+	blur.used_installer = true;
+
 	if (used_installer) {
 #if defined(_WIN32)
 		vspipe_path = (blur.resources_path / "lib\\vapoursynth\\vspipe.exe").wstring();
