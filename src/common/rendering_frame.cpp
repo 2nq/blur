@@ -98,7 +98,8 @@ FrameRender::DoRenderResult FrameRender::do_render(RenderCommands render_command
 			env["PYTHONPATH"] = (blur.resources_path / "python/lib/python3.12/site-packages").string();
 #elif defined(__linux__)
 			env["LD_LIBRARY_PATH"] = (blur.resources_path / "../lib").string();
-			env["PYTHONPATH"] = (blur.resources_path / "../lib/python3.12/site-packages").string();
+			env["PYTHONHOME"] = (blur.resources_path / "python").string();
+			env["PYTHONPATH"] = (blur.resources_path / "python/lib/python3.12/site-packages").string();
 #endif
 		}
 

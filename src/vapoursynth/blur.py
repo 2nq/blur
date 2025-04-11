@@ -12,10 +12,10 @@ if vars().get("macos_bundled") == "true":
         "libbestsource.dylib",
     }
 
-    for dylib in plugin_dir.glob("*.dylib"):
-        if dylib.name not in ignored:
-            print("loading", dylib.name)
-            core.std.LoadPlugin(path=str(dylib))
+    for plugin in plugin_dir.glob("*.dylib"):
+        if plugin.name not in ignored:
+            print("loading", plugin.name)
+            core.std.LoadPlugin(path=str(plugin))
 
 if vars().get("linux_bundled") == "true":
     # load plugins
@@ -24,10 +24,10 @@ if vars().get("linux_bundled") == "true":
         "libbestsource.so",
     }
 
-    for dylib in plugin_dir.glob("*.so"):
-        if dylib.name not in ignored:
-            print("loading", dylib.name)
-            core.std.LoadPlugin(path=str(dylib))
+    for plugin in plugin_dir.glob("*.so"):
+        if plugin.name not in ignored:
+            print("loading", plugin.name)
+            core.std.LoadPlugin(path=str(plugin))
 
 # add blur.py folder to path so it can reference scripts
 sys.path.insert(1, str(Path(__file__).parent))
