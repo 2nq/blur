@@ -37,8 +37,8 @@ cp -r out/python/* appimage/usr/bin/python
 cp /usr/local/lib/libvapoursynth* appimage/usr/lib
 cp -r out/ffmpeg-shared/lib/* appimage/usr/lib
 
-# this is also required for a vapoursynth plugin that i forget
-cp /usr/lib64/libfftw3* appimage/usr/lib
+# # this is also required for a vapoursynth plugin that i forget
+# cp /usr/lib64/libfftw3* appimage/usr/lib
 
 # copy vapoursynth plugins
 mkdir appimage/usr/bin/vapoursynth-plugins
