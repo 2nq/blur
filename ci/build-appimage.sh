@@ -3,6 +3,10 @@ set -e
 
 rm -rf appimage/
 
+# sudo cp -r out/python/bin/* /usr/local/bin
+# sudo cp -r out/python/include/* /usr/local/include
+# sudo cp -r out/python/lib/* /usr/local/lib
+
 # create appdir structure
 mkdir -p appimage/usr/bin
 mkdir -p appimage/usr/bin/ffmpeg
@@ -25,10 +29,16 @@ done
 cp ../resources/blur.desktop appimage/usr/share/applications/blur.desktop
 cp ../resources/blur.png appimage/usr/share/icons/hicolor/256x256/apps/blur.png
 
+# copy python
+mkdir -p appimage/usr/bin/python
+cp -r out/python/* appimage/usr/bin/python
+
 # copy shared libraries
-cp -r out/python/lib/* appimage/usr/lib
 cp /usr/local/lib/libvapoursynth* appimage/usr/lib
 cp -r out/ffmpeg-shared/lib/* appimage/usr/lib
+
+# this is also required for a vapoursynth plugin that i forget
+cp /usr/lib64/libfftw3* appimage/usr/lib
 
 # copy vapoursynth plugins
 mkdir appimage/usr/bin/vapoursynth-plugins
@@ -51,5 +61,7 @@ chmod +x appimage/usr/bin/ffmpeg*
 chmod +x appimage/usr/bin/vapoursynth*
 
 # build the appimage
+# export NO_STRIP=true (fedora)
+
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 ./linuxdeploy-x86_64.AppImage --appdir=appimage --output=appimage
