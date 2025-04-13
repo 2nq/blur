@@ -86,6 +86,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get remove llvm*
+          sudo apt-get remove --purge -y 'python3-*' || true
           sudo apt-get install -y libzimg-dev meson libxxhash-dev nasm libfftw3-dev llvm-16
           cd ci
           bash build-dependencies-linux.sh
