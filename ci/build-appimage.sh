@@ -33,6 +33,8 @@ cp ../resources/blur.png appimage/usr/share/icons/hicolor/256x256/apps/blur.png
 mkdir -p appimage/usr/bin/python
 cp -r out/python/* appimage/usr/bin/python
 
+cp -r out/python/lib/* appimage/usr/lib # idk man
+
 # copy shared libraries
 cp /usr/local/lib/libvapoursynth* appimage/usr/lib
 cp -r out/ffmpeg-shared/lib/* appimage/usr/lib

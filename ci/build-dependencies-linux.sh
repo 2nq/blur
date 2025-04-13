@@ -3,6 +3,11 @@ set -e
 
 out_dir=out
 
+ls -la /lib
+ls -la /bin
+ls -la /usr/local/lib
+ls -la /usr/local/bin
+
 echo "Building dependencies for Linux"
 
 # clean outputs every run
