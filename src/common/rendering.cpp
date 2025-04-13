@@ -175,7 +175,7 @@ RenderCommandsResult Render::build_render_commands() {
 		                std::format(L"macos_bundled={}", blur.used_installer ? L"true" : L"false"),
 #elif defined(__linux__)
 		                L"-a",
-		                std::format(L"linux_bundled={}", true ? L"true" : L"false"), // todo: fix used_installer on linux
+		                std::format(L"linux_bundled={}", true ? L"true" : L"false"),
 #endif
 #if defined(_WIN32)
 		                L"-a",
@@ -347,8 +347,8 @@ RenderResult Render::do_render(RenderCommands render_commands) {
 			env["PYTHONPATH"] = (blur.resources_path / "python/lib/python3.12/site-packages").string();
 #elif defined(__linux__)
 			env["LD_LIBRARY_PATH"] = (blur.resources_path / "../lib").string();
-			env["PYTHONHOME"] = (blur.resources_path / "python").string();
-			env["PYTHONPATH"] = (blur.resources_path / "python/lib/python3.12/site-packages").string();
+			env["PYTHONHOME"] = (blur.resources_path / "..").string();
+			env["PYTHONPATH"] = (blur.resources_path / "../lib/python3.12/site-packages").string();
 #endif
 		}
 
