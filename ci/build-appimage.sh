@@ -61,7 +61,7 @@ chmod +x appimage/usr/bin/ffmpeg*
 chmod +x appimage/usr/bin/vapoursynth*
 
 # build the appimage
-export NO_STRIP=true # (fedora)
+# export NO_STRIP=true # (fedora)
 
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 ./linuxdeploy-x86_64.AppImage --appdir=appimage --output=appimage
