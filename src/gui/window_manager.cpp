@@ -10,6 +10,7 @@ os::WindowRef gui::window_manager::create_window(os::DragTarget& drag_target) {
 	// spec.scale(2);
 
 	os::WindowRef window = os::instance()->makeWindow(spec);
+	window->setGpuAcceleration(true);
 	window->setCursor(os::NativeCursor::Arrow);
 	window->setTitle("Blur");
 	window->setDragTarget(&drag_target);

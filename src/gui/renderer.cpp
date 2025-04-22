@@ -17,6 +17,7 @@
 
 #include "resources/fonts/eb_garamond.h"
 #include "resources/fonts/dejavu_sans.h"
+#include "video/video.h"
 
 #define DEBUG_RENDER 0
 
@@ -1311,6 +1312,8 @@ void gui::renderer::components::configs::screen(
 
 bool gui::renderer::redraw_window(os::Window* window, bool force_render) {
 	ui::on_frame_start();
+
+	static VideoPlayer player(dynamic_cast<os::SkiaWindow*>(window));
 
 	set_cursor_this_frame = false;
 
