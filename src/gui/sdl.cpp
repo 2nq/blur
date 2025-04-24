@@ -104,7 +104,7 @@ bool sdl::resizing_event_watcher(void* data, SDL_Event* event) {
 	if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
 		SDL_Window* win = SDL_GetWindowFromID(event->window.windowID);
 		if (win == (SDL_Window*)data) {
-			gui::renderer::redraw_window(true);
+			gui::renderer::redraw_window(true); // TODO: squishy jelly
 		}
 	}
 

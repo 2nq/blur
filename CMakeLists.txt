@@ -10,7 +10,7 @@ endif()
 # Force static runtime on Windows
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(blur LANGUAGES CXX)
+project(blur LANGUAGES C CXX)
 
 # global settings
 set(CMAKE_CXX_STANDARD 20)
@@ -23,7 +23,7 @@ set(CMAKE_BINARY_DIR ${PROJECT_SOURCE_DIR}/build/${CMAKE_BUILD_TYPE})
 # packages
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system filesystem process)
+find_package(Boost REQUIRED COMPONENTS system filesystem)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 find_package(Freetype REQUIRED)
@@ -107,9 +107,14 @@ else()
 endif()
 
 # cli
-add_executable(blur-cli ${COMMON_SOURCES} ${CLI_SOURCES} ${RESOURCES}
-                        src/cli/cli_pch.cpp)
-target_link_libraries(blur-cli PRIVATE CLI11::CLI11)
+add_executable(
+  blur-cli
+  ${COMMON_SOURCES}
+  ${CLI_SOURCES}
+  ${RESOURCES})
+target_link_libraries(
+  blur-cli
+  PRIVATE CLI11::CLI11)
 target_precompile_headers(blur-cli PRIVATE src/cli/cli_pch.h)
 setup_target(blur-cli)
 
@@ -119,8 +124,7 @@ add_executable(
   ${COMMON_SOURCES}
   ${GUI_SOURCES}
   ${IMGUI_SOURCES}
-  ${RESOURCES}
-  src/gui/gui_pch.cpp)
+  ${RESOURCES})
 
 # imgui
 target_include_directories(blur-gui
@@ -129,7 +133,7 @@ target_compile_definitions(blur-gui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
 target_link_libraries(
   blur-gui
-  PRIVATE SDL3::SDL3 Freetype::Freetype glad::glad)
+  PRIVATE ZLIB::ZLIB SDL3::SDL3 Freetype::Freetype glad::glad)
 
 target_precompile_headers(blur-gui PRIVATE src/gui/gui_pch.h)
 

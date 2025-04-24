@@ -44,8 +44,6 @@ void ui::render_checkbox(const Container& container, const AnimatedElement& elem
 	text_pos.x += CHECKBOX_SIZE + LABEL_GAP;
 	text_pos.y = element.element->rect.center().y;
 
-	render::rect_stroke(element.element->rect, gfx::Color::red(100));
-
 	render::text(text_pos, gfx::Color::white(anim * 255), checkbox_data.label, *checkbox_data.font, FONT_CENTERED_Y);
 }
 

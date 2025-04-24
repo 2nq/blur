@@ -1,6 +1,5 @@
 ﻿#include "rendering.h"
 #include "config_presets.h"
-#include <boost/process.hpp>
 
 void Rendering::render_videos() {
 	if (!m_queue.empty()) {
