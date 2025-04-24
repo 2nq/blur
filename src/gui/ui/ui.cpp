@@ -1,14 +1,12 @@
 #include "ui.h"
-
-#include "gui/renderer.h"
-#include "gui/ui/keys.h"
-#include "render.h"
-#include "os/draw_text.h"
+#include "keys.h"
+#include "../render/render.h"
+#include "../sdl.h"
 
 const int SCROLLBAR_WIDTH = 3;
 
 namespace {
-	os::NativeCursor desired_cursor = os::NativeCursor::Arrow;
+	SDL_SystemCursor desired_cursor = SDL_SYSTEM_CURSOR_DEFAULT;
 
 	ui::AnimatedElement* hovered_element_internal = nullptr;
 	std::string hovered_id;
@@ -31,7 +29,7 @@ namespace {
 		return std::max(get_content_height(container) - container.get_usable_rect().h, 0);
 	}
 
-	void render_scrollbar(os::Surface* surface, const ui::Container& container) {
+	void render_scrollbar(const ui::Container& container) {
 		if (!can_scroll(container))
 			return;
 
@@ -49,7 +47,7 @@ namespace {
 			container.rect.x + container.rect.w - SCROLLBAR_WIDTH, scrollbar_y, SCROLLBAR_WIDTH, scrollbar_height
 		);
 
-		render::rounded_rect_filled(surface, scrollbar_rect, gfx::rgba(255, 255, 255, 50), 2.f);
+		render::rounded_rect_filled(scrollbar_rect, gfx::Color(255, 255, 255, 50), 2.f);
 	}
 }
 
@@ -235,7 +233,7 @@ void ui::center_elements_in_container(Container& container, bool horizontal, boo
 
 // NOLINTEND(readability-function-cognitive-complexity)
 
-void ui::set_cursor(os::NativeCursor cursor) {
+void ui::set_cursor(SDL_SystemCursor cursor) {
 	desired_cursor = cursor;
 }
 
@@ -324,8 +322,8 @@ void ui::on_update_input_end() {
 	keys::scroll_delta_precise = 0.f;
 
 	// set cursor based on if an element wanted pointer
-	gui::renderer::set_cursor(desired_cursor);
-	desired_cursor = os::NativeCursor::Arrow;
+	sdl::set_cursor(desired_cursor);
+	desired_cursor = SDL_SYSTEM_CURSOR_DEFAULT;
 }
 
 bool ui::update_container_frame(Container& container, float delta_time) {
@@ -398,12 +396,12 @@ bool ui::update_container_frame(Container& container, float delta_time) {
 
 void ui::on_update_frame_end() {}
 
-void ui::render_container(os::Surface* surface, Container& container) {
+void ui::render_container(Container& container) {
 	if (container.background_color) {
-		render::rect_filled(surface, container.rect, *container.background_color);
+		render::rect_filled(container.rect, *container.background_color);
 	}
 
-	// render::push_clip_rect(surface, container.rect); todo: fade or some shit but straight clipping looks poo
+	// render::push_clip_rect(container.rect); todo: fade or some shit but straight clipping looks poo
 
 	auto sorted_elements = get_sorted_container_elements(container);
 
@@ -411,14 +409,14 @@ void ui::render_container(os::Surface* surface, Container& container) {
 		const auto& id = it->first;
 		auto& element = it->second;
 
-		element.element->render_fn(container, surface, element);
+		element.element->render_fn(container, element);
 	}
 
 	if (can_scroll(container)) {
-		render_scrollbar(surface, container);
+		render_scrollbar(container);
 	}
 
-	// render::pop_clip_rect(surface);
+	// render::pop_clip_rect();
 }
 
 void ui::on_frame_start() {}

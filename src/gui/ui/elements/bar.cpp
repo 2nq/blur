@@ -1,42 +1,40 @@
 #include <utility>
 
 #include "../ui.h"
-#include "../render.h"
-#include "../utils.h"
+#include "../../render/render.h"
 
-void ui::render_bar(const Container& container, os::Surface* surface, const AnimatedElement& element) {
+void ui::render_bar(const Container& container, const AnimatedElement& element) {
 	const int text_gap = 7;
 
 	const auto& bar_data = std::get<BarElementData>(element.element->data);
 	float anim = element.animations.at(hasher("main")).current;
 
-	gfx::Color adjusted_background_color = utils::adjust_color(bar_data.background_color, anim);
-	gfx::Color adjusted_fill_color = utils::adjust_color(bar_data.fill_color, anim);
+	gfx::Color adjusted_background_color = bar_data.background_color.adjust_alpha(anim);
+	gfx::Color adjusted_fill_color = bar_data.fill_color.adjust_alpha(anim);
 
 	gfx::Size text_size(0, 0);
 
 	if (bar_data.bar_text && bar_data.text_color && bar_data.font) {
-		gfx::Color adjusted_text_color = utils::adjust_color(*bar_data.text_color, anim);
+		gfx::Color adjusted_text_color = (*bar_data.text_color).adjust_alpha(anim);
 
 		gfx::Point text_pos = element.element->rect.origin();
 
-		text_size = render::get_text_size(*bar_data.bar_text, **bar_data.font);
+		text_size = (*bar_data.font)->calc_size(*bar_data.bar_text);
 
 		text_pos.x = element.element->rect.x2();
-		text_pos.y += (*bar_data.font)->getSize() / 2;
 
-		render::text(surface, text_pos, adjusted_text_color, *bar_data.bar_text, **bar_data.font, os::TextAlign::Right);
+		render::text(text_pos, adjusted_text_color, *bar_data.bar_text, **bar_data.font, FONT_RIGHT_ALIGN);
 	}
 
 	gfx::Rect bar_rect = element.element->rect;
 	bar_rect.w -= text_size.w + text_gap;
 
-	render::rounded_rect_filled(surface, bar_rect, adjusted_background_color, 1000.f);
+	render::rounded_rect_filled(bar_rect, adjusted_background_color, 4.f);
 
 	if (bar_data.percent_fill > 0) {
 		gfx::Rect fill_rect = bar_rect;
 		fill_rect.w = static_cast<int>(bar_rect.w * bar_data.percent_fill);
-		render::rounded_rect_filled(surface, fill_rect, adjusted_fill_color, 1000.f);
+		render::rounded_rect_filled(fill_rect, adjusted_fill_color, 4.f);
 	}
 }
 
@@ -49,7 +47,7 @@ ui::Element& ui::add_bar(
 	int bar_width,
 	std::optional<std::string> bar_text,
 	std::optional<gfx::Color> text_color,
-	std::optional<const SkFont*> font
+	std::optional<const render::Font*> font
 ) {
 	Element element(
 		id,

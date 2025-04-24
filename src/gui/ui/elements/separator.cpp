@@ -1,16 +1,13 @@
 #include <utility>
 
 #include "../ui.h"
-#include "../render.h"
-#include "../utils.h"
+#include "../../render/render.h"
 
-#include "../../renderer.h"
-
-void ui::render_separator(const Container& container, os::Surface* surface, const AnimatedElement& element) {
+void ui::render_separator(const Container& container, const AnimatedElement& element) {
 	const auto& separator_data = std::get<SeparatorElementData>(element.element->data);
 	float anim = element.animations.at(hasher("main")).current;
 
-	gfx::Color color = utils::adjust_color(gfx::rgba(255, 255, 255, 50), anim);
+	gfx::Color color = gfx::Color(255, 255, 255, anim * 50);
 
 	gfx::Rect separator_rect = element.element->rect;
 	separator_rect.y = separator_rect.center().y;
@@ -18,24 +15,18 @@ void ui::render_separator(const Container& container, os::Surface* surface, cons
 
 	switch (separator_data.style) {
 		case SeparatorStyle::NORMAL: {
-			render::rect_filled(surface, separator_rect, color);
+			render::rect_filled(separator_rect, color);
 			break;
 		}
 		case SeparatorStyle::FADE_RIGHT: {
 			render::rect_filled_gradient(
-				surface,
-				separator_rect,
-				render::GradientDirection::GRADIENT_RIGHT,
-				{ color, utils::adjust_color(gfx::rgba(255, 255, 255, 50), 0.f) }
+				separator_rect, render::GradientDirection::GRADIENT_RIGHT, { color, color.adjust_alpha(0.f) }
 			);
 			break;
 		}
 		case SeparatorStyle::FADE_LEFT: {
 			render::rect_filled_gradient(
-				surface,
-				separator_rect,
-				render::GradientDirection::GRADIENT_LEFT,
-				{ color, utils::adjust_color(gfx::rgba(255, 255, 255, 50), 0.f) }
+				separator_rect, render::GradientDirection::GRADIENT_LEFT, { color, color.adjust_alpha(0.f) }
 			);
 			break;
 		}
@@ -47,16 +38,10 @@ void ui::render_separator(const Container& container, os::Surface* surface, cons
 			right_rect.x += right_rect.w;
 
 			render::rect_filled_gradient(
-				surface,
-				left_rect,
-				render::GradientDirection::GRADIENT_LEFT,
-				{ color, utils::adjust_color(gfx::rgba(255, 255, 255, 50), 0.f) }
+				left_rect, render::GradientDirection::GRADIENT_LEFT, { color, color.adjust_alpha(0.f) }
 			);
 			render::rect_filled_gradient(
-				surface,
-				right_rect,
-				render::GradientDirection::GRADIENT_RIGHT,
-				{ color, utils::adjust_color(gfx::rgba(255, 255, 255, 50), 0.f) }
+				right_rect, render::GradientDirection::GRADIENT_RIGHT, { color, color.adjust_alpha(0.f) }
 			);
 			break;
 		}

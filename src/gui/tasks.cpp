@@ -17,9 +17,6 @@ void tasks::run(const std::vector<std::string>& arguments) {
 	gui::initialisation_res = res;
 
 	rendering.set_progress_callback([] {
-		if (!gui::window)
-			return;
-
 		std::optional<Render*> current_render_opt = rendering.get_current_render();
 		if (current_render_opt) {
 			Render& current_render = **current_render_opt;
@@ -36,8 +33,7 @@ void tasks::run(const std::vector<std::string>& arguments) {
 
 		// idk what you're supposed to do to trigger a redraw in a separate thread!!! I dont do gui!!! this works
 		// tho :  ) todo: revisit this
-		os::Event event;
-		gui::window->queueEvent(event);
+		// TODO PORT:
 	});
 
 	rendering.set_render_finished_callback([](Render* render, const RenderResult& result) {
@@ -85,7 +81,7 @@ void tasks::run(const std::vector<std::string>& arguments) {
 
 	std::vector<std::wstring> wargs;
 	for (const auto argument : arguments) {
-		wargs.push_back(base::from_utf8(argument));
+		wargs.push_back(u::towstring(argument));
 	}
 
 	add_files(wargs); // todo: mac packaged app support (& linux? does it work?)
@@ -104,7 +100,7 @@ void tasks::add_files(const std::vector<std::wstring>& path_strs) {
 		auto video_info = u::get_video_info(path);
 		if (!video_info.has_video_stream) {
 			gui::renderer::add_notification(
-				std::format("File is not a valid video or is unreadable: {}", base::to_utf8(path.wstring())),
+				std::format("File is not a valid video or is unreadable: {}", u::tostring(path.wstring())),
 				ui::NotificationType::NOTIF_ERROR
 			);
 			continue;
@@ -116,7 +112,7 @@ void tasks::add_files(const std::vector<std::wstring>& path_strs) {
 
 		if (gui::renderer::screen != gui::renderer::Screens::MAIN) {
 			gui::renderer::add_notification(
-				std::format("Queued '{}' for rendering", base::to_utf8(render.get_video_name())),
+				std::format("Queued '{}' for rendering", u::tostring(render.get_video_name())),
 				ui::NotificationType::INFO
 			);
 		}

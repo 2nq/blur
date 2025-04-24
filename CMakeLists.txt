@@ -23,9 +23,11 @@ set(CMAKE_BINARY_DIR ${PROJECT_SOURCE_DIR}/build/${CMAKE_BUILD_TYPE})
 # packages
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system filesystem)
+find_package(Boost REQUIRED COMPONENTS system filesystem process)
 find_package(CLI11 CONFIG REQUIRED)
-find_package(ZLIB REQUIRED)
+find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
+find_package(Freetype REQUIRED)
+find_package(glad CONFIG REQUIRED)
 
 # source files
 file(GLOB_RECURSE COMMON_SOURCES "src/common/*.cpp" "src/common/*.hpp"
@@ -34,6 +36,17 @@ file(GLOB_RECURSE COMMON_SOURCES "src/common/*.cpp" "src/common/*.hpp"
 file(GLOB_RECURSE CLI_SOURCES "src/cli/*.cpp" "src/cli/*.hpp" "src/cli/*.h")
 
 file(GLOB_RECURSE GUI_SOURCES "src/gui/*.cpp" "src/gui/*.hpp" "src/gui/*.h")
+
+# collect imgui sources
+set(IMGUI_SOURCES
+    dependencies/imgui/imgui.cpp
+    dependencies/imgui/imgui_demo.cpp
+    dependencies/imgui/imgui_draw.cpp
+    dependencies/imgui/imgui_tables.cpp
+    dependencies/imgui/imgui_widgets.cpp
+    dependencies/imgui/backends/imgui_impl_sdl3.cpp
+    dependencies/imgui/backends/imgui_impl_opengl3.cpp
+    dependencies/imgui/misc/freetype/imgui_freetype.cpp)
 
 file(GLOB_RECURSE RESOURCES "resources/*")
 
@@ -101,73 +114,22 @@ target_precompile_headers(blur-cli PRIVATE src/cli/cli_pch.h)
 setup_target(blur-cli)
 
 # gui
-set(LAF_BACKEND "skia")
-set(SKIA_DIR
-    ${PROJECT_SOURCE_DIR}/dependencies/skia
-    CACHE PATH "Path to Skia library directory")
+add_executable(
+  blur-gui WIN32
+  ${COMMON_SOURCES}
+  ${GUI_SOURCES}
+  ${IMGUI_SOURCES}
+  ${RESOURCES}
+  src/gui/gui_pch.cpp)
 
-# download platform specific skia to dependencies/skia
-include(FetchContent)
+# imgui
+target_include_directories(blur-gui
+                            PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/imgui)
+target_compile_definitions(blur-gui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
-if(UNIX AND NOT APPLE)
-  set(SKIA_REPOSITORY
-      https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-Linux-Release-x64-libstdc++.zip
-  )
-elseif(APPLE)
-  if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64" OR CMAKE_OSX_ARCHITECTURES
-                                                    MATCHES "arm64")
-    set(SKIA_REPOSITORY
-        https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-macOS-Release-arm64.zip
-    )
-    set(SKIA_LIBRARY_DIR
-        ${SKIA_DIR}/out/Release-arm64
-        CACHE PATH "Skia library directory")
-    set(SKIA_LIBRARY ${SKIA_LIBRARY_DIR}/libskia.a)
-  elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_OSX_ARCHITECTURES
-                                                         MATCHES "x86_64")
-    set(SKIA_REPOSITORY
-        https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-macOS-Release-x64.zip
-    )
-    set(SKIA_LIBRARY_DIR
-        ${SKIA_DIR}/out/Release-x64
-        CACHE PATH "Skia library directory")
-    set(SKIA_LIBRARY ${SKIA_LIBRARY_DIR}/libskia.a)
-  else()
-    message(
-      FATAL_ERROR
-        "Unsupported macOS architecture: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
-  endif()
-elseif(WIN32)
-  set(SKIA_REPOSITORY
-      https://github.com/aseprite/skia/releases/download/m102-861e4743af/Skia-Windows-Release-x64.zip
-  )
-  set(SKIA_LIBRARY_DIR
-      ${SKIA_DIR}/out/Release-x64
-      CACHE PATH "Skia library directory")
-  set(SKIA_LIBRARY ${SKIA_LIBRARY_DIR}/skia.lib)
-endif()
-
-FetchContent_Declare(skia URL ${SKIA_REPOSITORY} SOURCE_DIR ${SKIA_DIR}
-                              DOWNLOAD_EXTRACT_TIMESTAMP true)
-
-FetchContent_GetProperties(skia)
-if(NOT skia_POPULATED)
-  FetchContent_MakeAvailable(skia)
-endif()
-
-set(LAF_WITH_EXAMPLES OFF) # disable examples
-set(LAF_WITH_TESTS OFF) # disable tests
-
-add_subdirectory(dependencies/laf)
-
-# LAF libraries + Blur are compiled with config_blur.h
-target_include_directories(laf-base PUBLIC src/gui)
-target_compile_definitions(laf-base PUBLIC HAVE_CONFIG_H)
-
-add_executable(blur-gui WIN32 ${COMMON_SOURCES} ${GUI_SOURCES} ${RESOURCES}
-                              src/gui/gui_pch.cpp)
-
-target_link_libraries(blur-gui PRIVATE laf-base laf-gfx laf-os ZLIB::ZLIB)
+target_link_libraries(
+  blur-gui
+  PRIVATE SDL3::SDL3 Freetype::Freetype glad::glad)
 
 target_precompile_headers(blur-gui PRIVATE src/gui/gui_pch.h)
 
@@ -227,7 +189,5 @@ elseif(WIN32)
   target_link_libraries(blur-gui PRIVATE Shcore)
 endif()
 
-set_target_properties(blur-gui PROPERTIES LINK_FLAGS
-                                          "${LAF_BACKEND_LINK_FLAGS}")
 set_target_properties(blur-gui PROPERTIES OUTPUT_NAME "blur")
 setup_target(blur-gui)

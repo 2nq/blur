@@ -1,36 +1,34 @@
 #include <utility>
 
 #include "../ui.h"
-#include "../render.h"
-#include "../utils.h"
+#include "../../render/render.h"
+
 #include "../keys.h"
 
-#include "../../renderer.h"
+const float BUTTON_ROUNDING = 7.f;
 
-void ui::render_button(const Container& container, os::Surface* surface, const AnimatedElement& element) {
-	const float button_rounding = 7.8f;
-
+void ui::render_button(const Container& container, const AnimatedElement& element) {
 	const auto& button_data = std::get<ButtonElementData>(element.element->data);
 	float anim = element.animations.at(hasher("main")).current;
 	float hover_anim = element.animations.at(hasher("hover")).current;
 
 	int shade = 20 + (20 * hover_anim);
-	gfx::Color adjusted_color = utils::adjust_color(gfx::rgba(shade, shade, shade, 255), anim);
-	gfx::Color adjusted_text_color = utils::adjust_color(gfx::rgba(255, 255, 255, 255), anim);
-
-	gfx::Point text_pos = element.element->rect.center();
-
-	text_pos.y += button_data.font.getSize() / 2 - 1;
+	gfx::Color adjusted_color = gfx::Color(shade, shade, shade, anim * 255);
+	gfx::Color adjusted_text_color = gfx::Color(255, 255, 255, anim * 255);
 
 	// fill
-	render::rounded_rect_filled(surface, element.element->rect, adjusted_color, button_rounding);
+	render::rounded_rect_filled(element.element->rect, adjusted_color, BUTTON_ROUNDING);
 
 	// border
-	render::rounded_rect_stroke(
-		surface, element.element->rect, utils::adjust_color(gfx::rgba(100, 100, 100, 255), anim), button_rounding
-	);
+	render::rounded_rect_stroke(element.element->rect, gfx::Color(100, 100, 100, anim * 255), BUTTON_ROUNDING);
 
-	render::text(surface, text_pos, adjusted_text_color, button_data.text, button_data.font, os::TextAlign::Center);
+	render::text(
+		element.element->rect.center(),
+		adjusted_text_color,
+		button_data.text,
+		*button_data.font,
+		FONT_CENTERED_X | FONT_CENTERED_Y
+	);
 }
 
 bool ui::update_button(const Container& container, AnimatedElement& element) {
@@ -42,12 +40,12 @@ bool ui::update_button(const Container& container, AnimatedElement& element) {
 	anim.set_goal(hovered ? 1.f : 0.f);
 
 	if (hovered) {
-		set_cursor(os::NativeCursor::Link);
+		set_cursor(SDL_SYSTEM_CURSOR_POINTER);
 
 		if (button_data.on_press) {
 			if (keys::is_mouse_down()) {
 				(*button_data.on_press)();
-				keys::on_mouse_press_handled(os::Event::MouseButton::LeftButton);
+				keys::on_mouse_press_handled(SDL_BUTTON_LEFT);
 
 				return true;
 			}
@@ -61,12 +59,12 @@ ui::Element& ui::add_button(
 	const std::string& id,
 	Container& container,
 	const std::string& text,
-	const SkFont& font,
+	const render::Font& font,
 	std::optional<std::function<void()>> on_press
 ) {
-	const gfx::Size button_padding(40, 20);
+	const gfx::Size button_padding(40, 17);
 
-	gfx::Size text_size = render::get_text_size(text, font);
+	gfx::Size text_size = font.calc_size(text);
 
 	Element element(
 		id,
@@ -74,7 +72,7 @@ ui::Element& ui::add_button(
 		gfx::Rect(container.current_position, text_size + button_padding),
 		ButtonElementData{
 			.text = text,
-			.font = font,
+			.font = &font,
 			.on_press = std::move(on_press),
 		},
 		render_button,

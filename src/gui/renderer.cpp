@@ -1,22 +1,14 @@
-
 #include "renderer.h"
-
-#include "base/launcher.h"
-#include "clip/clip.h"
 
 #include "common/rendering.h"
 #include "common/rendering_frame.h"
 
-#include "drag_handler.h"
+#include "sdl.h"
 #include "tasks.h"
 #include "gui.h"
 
 #include "ui/ui.h"
-#include "ui/utils.h"
-#include "ui/render.h"
-
-#include "resources/fonts/eb_garamond.h"
-#include "resources/fonts/dejavu_sans.h"
+#include "render/render.h"
 
 #define DEBUG_RENDER 0
 
@@ -27,25 +19,6 @@ const int NOTIFICATIONS_PAD_X = 10;
 const int NOTIFICATIONS_PAD_Y = 10;
 
 const float FPS_SMOOTHING = 0.95f;
-
-void gui::renderer::init_fonts() {
-	fonts::font = utils::create_font_from_data(DejaVuSans_ttf.data(), DejaVuSans_ttf.size(), 11);
-
-	fonts::header_font = utils::create_font_from_data(
-		EBGaramond_VariableFont_wght_ttf.data(), EBGaramond_VariableFont_wght_ttf.size(), 30
-	);
-	fonts::smaller_header_font = fonts::header_font;
-	fonts::smaller_header_font.setSize(18.f);
-}
-
-void gui::renderer::set_cursor(os::NativeCursor cursor) {
-	if (current_cursor != cursor) {
-		current_cursor = cursor;
-		window->setCursor(cursor);
-	}
-
-	set_cursor_this_frame = true;
-}
 
 void gui::renderer::components::render(
 	ui::Container& container,
@@ -61,10 +34,10 @@ void gui::renderer::components::render(
 	ui::add_text(
 		std::format("video {} name text", render.get_render_id()),
 		container,
-		base::to_utf8(render.get_video_name()),
-		gfx::rgba(255, 255, 255, (current ? 255 : 100)),
+		u::tostring(render.get_video_name()),
+		gfx::Color(255, 255, 255, (current ? 255 : 100)),
 		fonts::smaller_header_font,
-		os::TextAlign::Center
+		FONT_CENTERED_X
 	);
 
 	if (!current)
@@ -75,16 +48,17 @@ void gui::renderer::components::render(
 
 	std::string preview_path = render.get_preview_path().string();
 	if (!preview_path.empty() && render_status.current_frame > 0) {
-		auto element = ui::add_image(
-			"preview image",
-			container,
-			preview_path,
-			gfx::Size(container.get_usable_rect().w, container.get_usable_rect().h / 2),
-			std::to_string(render_status.current_frame)
-		);
-		if (element) {
-			bar_width = (*element)->rect.w;
-		}
+		// TODO PORT:
+		// auto element = ui::add_image(
+		// 	"preview image",
+		// 	container,
+		// 	preview_path,
+		// 	gfx::Size(container.get_usable_rect().w, container.get_usable_rect().h / 2),
+		// 	std::to_string(render_status.current_frame)
+		// );
+		// if (element) {
+		// 	bar_width = (*element)->rect.w;
+		// }
 	}
 
 	if (render_status.init) {
@@ -95,12 +69,12 @@ void gui::renderer::components::render(
 			"progress bar",
 			container,
 			bar_percent,
-			gfx::rgba(51, 51, 51, 255),
-			gfx::rgba(255, 255, 255, 255),
+			gfx::Color(51, 51, 51, 255),
+			gfx::Color::white(),
 			bar_width,
 			std::format("{:.1f}%", render_progress * 100),
-			gfx::rgba(255, 255, 255, 255),
-			&fonts::font
+			gfx::Color::white(),
+			&fonts::dejavu
 		);
 
 		container.push_element_gap(6);
@@ -108,9 +82,9 @@ void gui::renderer::components::render(
 			"progress text",
 			container,
 			std::format("frame {}/{}", render_status.current_frame, render_status.total_frames),
-			gfx::rgba(255, 255, 255, 155),
-			fonts::font,
-			os::TextAlign::Center
+			gfx::Color::white(155),
+			fonts::dejavu,
+			FONT_CENTERED_X
 		);
 		container.pop_element_gap();
 
@@ -118,9 +92,9 @@ void gui::renderer::components::render(
 			"progress text 2",
 			container,
 			std::format("{:.2f} frames per second", render_status.fps),
-			gfx::rgba(255, 255, 255, 155),
-			fonts::font,
-			os::TextAlign::Center
+			gfx::Color::white(155),
+			fonts::dejavu,
+			FONT_CENTERED_X
 		);
 
 		is_progress_shown = true;
@@ -130,9 +104,9 @@ void gui::renderer::components::render(
 			"initialising render text",
 			container,
 			"Initialising render...",
-			gfx::rgba(255, 255, 255, 255),
-			fonts::font,
-			os::TextAlign::Center
+			gfx::Color::white(),
+			fonts::dejavu,
+			FONT_CENTERED_X
 		);
 	}
 }
@@ -144,16 +118,10 @@ void gui::renderer::components::main_screen(ui::Container& container, float delt
 		bar_percent = 0.f;
 
 		gfx::Point title_pos = container.get_usable_rect().center();
-		title_pos.y = int(PAD_Y + fonts::header_font.getSize());
+		title_pos.y = int(PAD_Y + fonts::header_font.height());
 
 		ui::add_text_fixed(
-			"blur title text",
-			container,
-			title_pos,
-			"blur",
-			gfx::rgba(255, 255, 255, 255),
-			fonts::header_font,
-			os::TextAlign::Center
+			"blur title text", container, title_pos, "blur", gfx::Color::white(), fonts::header_font, FONT_CENTERED_X
 		);
 
 		if (initialisation_res && !initialisation_res->success) {
@@ -161,42 +129,38 @@ void gui::renderer::components::main_screen(ui::Container& container, float delt
 				"failed to initialise text",
 				main_container,
 				"Failed to initialise",
-				gfx::rgba(255, 255, 255),
-				fonts::font,
-				os::TextAlign::Center
+				gfx::Color::white(),
+				fonts::dejavu,
+				FONT_CENTERED_X
 			);
 
 			ui::add_text(
 				"failed to initialise reason",
 				main_container,
 				initialisation_res->error_message,
-				gfx::rgba(255, 255, 255, 155),
-				fonts::font,
-				os::TextAlign::Center
+				gfx::Color::white(155),
+				fonts::dejavu,
+				FONT_CENTERED_X
 			);
 
 			return;
 		}
 
-		ui::add_button("open file button", container, "Open files", fonts::font, [] {
-			base::paths paths;
-			utils::show_file_selector("Blur input", "", {}, os::FileDialog::Type::OpenFiles, paths);
+		ui::add_button("open file button", container, "Open files", fonts::dejavu, [] {
+			// TODO PORT:
+			// base::paths paths;
+			// utils::show_file_selector("Blur input", "", {}, os::FileDialog::Type::OpenFiles, paths);
 
-			std::vector<std::wstring> wpaths;
-			for (const auto path : paths) {
-				wpaths.push_back(base::from_utf8(path));
-			}
+			// std::vector<std::wstring> wpaths;
+			// for (const auto path : paths) {
+			// 	wpaths.push_back(u::towstring(path));
+			// }
 
-			tasks::add_files(wpaths);
+			// tasks::add_files(wpaths);
 		});
 
 		ui::add_text(
-			"drop file text",
-			container,
-			"or drop them anywhere",
-			gfx::rgba(255, 255, 255, 255),
-			fonts::font,
-			os::TextAlign::Center
+			"drop file text", container, "or drop them anywhere", gfx::Color::white(), fonts::dejavu, FONT_CENTERED_X
 		);
 	}
 	else {
@@ -266,7 +230,7 @@ void gui::renderer::components::configs::set_interpolated_fps() {
 }
 
 void gui::renderer::components::configs::options(ui::Container& container, BlurSettings& settings) {
-	static const gfx::Color section_color = gfx::rgba(155, 155, 155, 255);
+	static const gfx::Color section_color = gfx::Color(155, 155, 155, 255);
 
 	bool first_section = true;
 	auto section_component = [&](std::string label, bool* setting = nullptr, bool forced_on = false) {
@@ -280,19 +244,17 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			return;
 
 		if (!forced_on) {
-			ui::add_checkbox(std::format("section {} checkbox", label), container, label, *setting, fonts::font);
+			ui::add_checkbox(std::format("section {} checkbox", label), container, label, *setting, fonts::dejavu);
 		}
 		else {
-			ui::add_text(
-				std::format("section {}", label), container, label, gfx::rgba(255, 255, 255, 255), fonts::font
-			);
+			ui::add_text(std::format("section {}", label), container, label, gfx::Color::white(), fonts::dejavu);
 
 			ui::add_text(
 				std::format("section {} forced", label),
 				container,
 				"forced on as settings in this section have been modified",
-				gfx::rgba(255, 255, 255, 175),
-				fonts::font
+				gfx::Color(255, 255, 255, 175),
+				fonts::dejavu
 			);
 		}
 	};
@@ -303,15 +265,15 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 	section_component("blur", &settings.blur);
 
 	if (settings.blur) {
-		ui::add_slider("blur amount", container, 0.f, 2.f, &settings.blur_amount, "blur amount: {:.2f}", fonts::font);
-		ui::add_slider("output fps", container, 1, 120, &settings.blur_output_fps, "output fps: {} fps", fonts::font);
+		ui::add_slider("blur amount", container, 0.f, 2.f, &settings.blur_amount, "blur amount: {:.2f}", fonts::dejavu);
+		ui::add_slider("output fps", container, 1, 120, &settings.blur_output_fps, "output fps: {} fps", fonts::dejavu);
 		ui::add_dropdown(
 			"blur weighting",
 			container,
 			"blur weighting",
 			{ "gaussian", "gaussian_sym", "pyramid", "pyramid_sym", "custom_weight", "custom_function", "equal" },
 			settings.blur_weighting,
-			fonts::font
+			fonts::dejavu
 		);
 	}
 
@@ -326,7 +288,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			container,
 			"interpolate by scaling fps",
 			interpolate_scale,
-			fonts::font,
+			fonts::dejavu,
 			[&](bool new_value) {
 				set_interpolated_fps();
 			}
@@ -340,7 +302,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 				10.f,
 				&interpolated_fps_mult,
 				"interpolated fps: {:.1f}x",
-				fonts::font,
+				fonts::dejavu,
 				[&](std::variant<int*, float*> value) {
 					set_interpolated_fps();
 				},
@@ -355,7 +317,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 				2400,
 				&interpolated_fps,
 				"interpolated fps: {} fps",
-				fonts::font,
+				fonts::dejavu,
 				[&](std::variant<int*, float*> value) {
 					set_interpolated_fps();
 				}
@@ -372,7 +334,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 				"rife", // plugins broken on mac rn idk why todo: fix when its fixed
 			},
 			settings.interpolation_method,
-			fonts::font
+			fonts::dejavu
 		);
 #endif
 	}
@@ -390,7 +352,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 				container,
 				"pre-interpolate by scaling fps",
 				pre_interpolate_scale,
-				fonts::font,
+				fonts::dejavu,
 				[&](bool new_value) {
 					set_interpolated_fps();
 				}
@@ -404,7 +366,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 					interpolate_scale ? interpolated_fps_mult : 10.f,
 					&pre_interpolated_fps_mult,
 					"pre-interpolated fps: {:.1f}x",
-					fonts::font,
+					fonts::dejavu,
 					[&](std::variant<int*, float*> value) {
 						set_interpolated_fps();
 					},
@@ -419,7 +381,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 					!interpolate_scale ? interpolated_fps : 2400,
 					&pre_interpolated_fps,
 					"pre-interpolated fps: {} fps",
-					fonts::font,
+					fonts::dejavu,
 					[&](std::variant<int*, float*> value) {
 						set_interpolated_fps();
 					}
@@ -434,7 +396,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 	*/
 	section_component("deduplication");
 
-	ui::add_checkbox("deduplicate checkbox", container, "deduplicate", settings.deduplicate, fonts::font);
+	ui::add_checkbox("deduplicate checkbox", container, "deduplicate", settings.deduplicate, fonts::dejavu);
 
 	ui::add_dropdown(
 		"deduplicate method dropdown",
@@ -446,7 +408,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 #endif
 	      "old" },
 		settings.deduplicate_method,
-		fonts::font
+		fonts::dejavu
 	);
 
 	/*
@@ -460,7 +422,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 		std::format("encode preset ({})", settings.gpu_encoding ? "gpu: " + settings.gpu_type : "cpu"),
 		u::get_supported_presets(settings.gpu_encoding, settings.gpu_type),
 		settings.encode_preset,
-		fonts::font
+		fonts::dejavu
 	);
 
 	if (settings.advanced.ffmpeg_override.empty()) {
@@ -480,7 +442,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 		settings.quality = std::clamp(settings.quality, min_quality, max_quality);
 
 		ui::add_slider(
-			"quality", container, min_quality, max_quality, &settings.quality, quality_label, fonts::font, {}, 0.f
+			"quality", container, min_quality, max_quality, &settings.quality, quality_label, fonts::dejavu, {}, 0.f
 		);
 	}
 	else {
@@ -488,32 +450,32 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			"ffmpeg override quality warning",
 			container,
 			"quality overridden by custom ffmpeg filters",
-			gfx::rgba(252, 186, 3, 150),
-			fonts::font
+			gfx::Color(252, 186, 3, 150),
+			fonts::dejavu
 		);
 	}
 
-	ui::add_checkbox("preview checkbox", container, "preview", settings.preview, fonts::font);
+	ui::add_checkbox("preview checkbox", container, "preview", settings.preview, fonts::dejavu);
 
 	ui::add_checkbox(
-		"detailed filenames checkbox", container, "detailed filenames", settings.detailed_filenames, fonts::font
+		"detailed filenames checkbox", container, "detailed filenames", settings.detailed_filenames, fonts::dejavu
 	);
 
-	ui::add_checkbox("copy dates checkbox", container, "copy dates", settings.copy_dates, fonts::font);
+	ui::add_checkbox("copy dates checkbox", container, "copy dates", settings.copy_dates, fonts::dejavu);
 
 	/*
 	    GPU Acceleration
 	*/
 	section_component("gpu acceleration");
 
-	ui::add_checkbox("gpu decoding checkbox", container, "gpu decoding", settings.gpu_decoding, fonts::font);
+	ui::add_checkbox("gpu decoding checkbox", container, "gpu decoding", settings.gpu_decoding, fonts::dejavu);
 
 	ui::add_checkbox(
-		"gpu interpolation checkbox", container, "gpu interpolation", settings.gpu_interpolation, fonts::font
+		"gpu interpolation checkbox", container, "gpu interpolation", settings.gpu_interpolation, fonts::dejavu
 	);
 
 	if (settings.advanced.ffmpeg_override.empty()) {
-		ui::add_checkbox("gpu encoding checkbox", container, "gpu encoding", settings.gpu_encoding, fonts::font);
+		ui::add_checkbox("gpu encoding checkbox", container, "gpu encoding", settings.gpu_encoding, fonts::dejavu);
 
 		if (settings.gpu_encoding) {
 			auto gpu_types = u::get_available_gpu_types();
@@ -524,7 +486,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 					"gpu encoding - gpu type",
 					gpu_types,
 					settings.gpu_type,
-					fonts::font
+					fonts::dejavu
 				);
 			}
 		}
@@ -534,8 +496,8 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			"ffmpeg override gpu encoding warning",
 			container,
 			"gpu encoding overridden by custom ffmpeg filters",
-			gfx::rgba(252, 186, 3, 150),
-			fonts::font
+			gfx::Color(252, 186, 3, 150),
+			fonts::dejavu
 		);
 	}
 
@@ -560,7 +522,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 		"rife gpu",
 		blur.rife_gpu_names,
 		rife_gpu,
-		fonts::font,
+		fonts::dejavu,
 		[&](std::string* new_gpu_name) {
 			for (const auto& [gpu_index, gpu_name] : blur.rife_gpus) {
 				if (gpu_name == *new_gpu_name) {
@@ -584,7 +546,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			2.f,
 			&settings.input_timescale,
 			"input timescale: {:.2f}",
-			fonts::font,
+			fonts::dejavu,
 			{},
 			0.01f
 		);
@@ -596,7 +558,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			2.f,
 			&settings.output_timescale,
 			"output timescale: {:.2f}",
-			fonts::font,
+			fonts::dejavu,
 			{},
 			0.01f
 		);
@@ -606,7 +568,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			container,
 			"adjust timescaled audio pitch",
 			settings.output_timescale_audio_pitch,
-			fonts::font
+			fonts::dejavu
 		);
 	}
 
@@ -617,12 +579,14 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 
 	if (settings.filters) {
 		ui::add_slider(
-			"brightness", container, 0.f, 2.f, &settings.brightness, "brightness: {:.2f}", fonts::font, {}, 0.01f
+			"brightness", container, 0.f, 2.f, &settings.brightness, "brightness: {:.2f}", fonts::dejavu, {}, 0.01f
 		);
 		ui::add_slider(
-			"saturation", container, 0.f, 2.f, &settings.saturation, "saturation: {:.2f}", fonts::font, {}, 0.01f
+			"saturation", container, 0.f, 2.f, &settings.saturation, "saturation: {:.2f}", fonts::dejavu, {}, 0.01f
 		);
-		ui::add_slider("contrast", container, 0.f, 2.f, &settings.contrast, "contrast: {:.2f}", fonts::font, {}, 0.01f);
+		ui::add_slider(
+			"contrast", container, 0.f, 2.f, &settings.contrast, "contrast: {:.2f}", fonts::dejavu, {}, 0.01f
+		);
 	}
 
 	bool modified_advanced = settings.advanced != config_blur::DEFAULT_CONFIG.advanced;
@@ -643,7 +607,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 				10,
 				&settings.advanced.deduplicate_range,
 				"deduplicate range: {}",
-				fonts::font,
+				fonts::dejavu,
 				{},
 				0.f,
 				"-1 = infinite"
@@ -663,7 +627,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			container,
 			settings.advanced.deduplicate_threshold,
 			"deduplicate threshold",
-			fonts::font
+			fonts::dejavu
 		);
 
 		if (!is_float) {
@@ -673,8 +637,8 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 				"deduplicate threshold not a float warning",
 				container,
 				"deduplicate threshold must be a decimal number",
-				gfx::rgba(255, 0, 0, 255),
-				fonts::font
+				gfx::Color(255, 0, 0, 255),
+				fonts::dejavu
 			);
 		}
 
@@ -684,7 +648,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 		section_component("advanced rendering");
 
 		ui::add_text_input(
-			"video container text input", container, settings.advanced.video_container, "video container", fonts::font
+			"video container text input", container, settings.advanced.video_container, "video container", fonts::dejavu
 		);
 
 		bool bad_audio = settings.timescale && (u::contains(settings.advanced.ffmpeg_override, "-c:a copy") ||
@@ -697,7 +661,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			container,
 			settings.advanced.ffmpeg_override,
 			"custom ffmpeg filters",
-			fonts::font
+			fonts::dejavu
 		);
 
 		if (bad_audio) {
@@ -707,12 +671,12 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 				"timescale audio copy warning",
 				container,
 				"cannot use -c:a copy while using timescale",
-				gfx::rgba(255, 0, 0, 255),
-				fonts::font
+				gfx::Color(255, 0, 0, 255),
+				fonts::dejavu
 			);
 		}
 
-		ui::add_checkbox("debug checkbox", container, "debug", settings.advanced.debug, fonts::font);
+		ui::add_checkbox("debug checkbox", container, "debug", settings.advanced.debug, fonts::dejavu);
 
 		/*
 		    Advanced Interpolation
@@ -726,7 +690,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 				"SVP interpolation preset",
 				config_blur::SVP_INTERPOLATION_PRESETS,
 				settings.advanced.svp_interpolation_preset,
-				fonts::font
+				fonts::dejavu
 			);
 
 			ui::add_dropdown(
@@ -735,7 +699,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 				"SVP interpolation algorithm",
 				config_blur::SVP_INTERPOLATION_ALGORITHMS,
 				settings.advanced.svp_interpolation_algorithm,
-				fonts::font
+				fonts::dejavu
 			);
 		}
 
@@ -745,7 +709,7 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			"interpolation block size",
 			config_blur::INTERPOLATION_BLOCK_SIZES,
 			settings.advanced.interpolation_blocksize,
-			fonts::font
+			fonts::dejavu
 		);
 
 		ui::add_slider(
@@ -755,11 +719,11 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			500,
 			&settings.advanced.interpolation_mask_area,
 			"interpolation mask area: {}",
-			fonts::font
+			fonts::dejavu
 		);
 
 #ifndef __APPLE__ // rife issue again
-		ui::add_text_input("rife model", container, settings.advanced.rife_model, "rife model", fonts::font);
+		ui::add_text_input("rife model", container, settings.advanced.rife_model, "rife model", fonts::dejavu);
 #endif
 
 		/*
@@ -774,21 +738,21 @@ void gui::renderer::components::configs::options(ui::Container& container, BlurS
 			10.f,
 			&settings.advanced.blur_weighting_gaussian_std_dev,
 			"blur weighting gaussian std dev: {:.2f}",
-			fonts::font
+			fonts::dejavu
 		);
 		ui::add_checkbox(
 			"blur weighting triangle reverse checkbox",
 			container,
 			"blur weighting triangle reverse",
 			settings.advanced.blur_weighting_triangle_reverse,
-			fonts::font
+			fonts::dejavu
 		);
 		ui::add_text_input(
 			"blur weighting bound input",
 			container,
 			settings.advanced.blur_weighting_bound,
 			"blur weighting bound",
-			fonts::font
+			fonts::dejavu
 		);
 	}
 	else {
@@ -880,7 +844,7 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 							"Failed to generate config preview. Click to copy error message",
 							ui::NotificationType::NOTIF_ERROR,
 							[res] {
-								clip::set_text(res.error_message);
+								// clip::set_text(res.error_message); TODO PORT:
 								add_notification(
 									"Copied error message to clipboard",
 									ui::NotificationType::INFO,
@@ -909,14 +873,15 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 
 	try {
 		if (!preview_path.empty() && std::filesystem::exists(preview_path) && !error) {
-			auto element = ui::add_image(
-				"config preview image",
-				container,
-				preview_path,
-				container.get_usable_rect().size(),
-				std::to_string(preview_id),
-				gfx::rgba(255, 255, 255, loading ? 100 : 255)
-			);
+			// TODO PORT:
+			// auto element = ui::add_image(
+			// 	"config preview image",
+			// 	container,
+			// 	preview_path,
+			// 	container.get_usable_rect().size(),
+			// 	std::to_string(preview_id),
+			// 	gfx::Color::white(loading ? 100 : 255)
+			// );
 		}
 		else {
 			if (sample_video_exists) {
@@ -925,9 +890,9 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 						"loading config preview text",
 						container,
 						"Loading config preview...",
-						gfx::rgba(255, 255, 255, 100),
-						fonts::font,
-						os::TextAlign::Center
+						gfx::Color::white(100),
+						fonts::dejavu,
+						FONT_CENTERED_X
 					);
 				}
 				else {
@@ -935,9 +900,9 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 						"failed to generate preview text",
 						container,
 						"Failed to generate preview.",
-						gfx::rgba(255, 255, 255, 100),
-						fonts::font,
-						os::TextAlign::Center
+						gfx::Color::white(100),
+						fonts::dejavu,
+						FONT_CENTERED_X
 					);
 				}
 			}
@@ -946,28 +911,29 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 					"sample video does not exist text",
 					container,
 					"No preview video found.",
-					gfx::rgba(255, 255, 255, 100),
-					fonts::font,
-					os::TextAlign::Center
+					gfx::Color::white(100),
+					fonts::dejavu,
+					FONT_CENTERED_X
 				);
 
 				ui::add_text(
 					"sample video does not exist text 2",
 					container,
 					"Drop a video here to add one.",
-					gfx::rgba(255, 255, 255, 100),
-					fonts::font,
-					os::TextAlign::Center
+					gfx::Color::white(100),
+					fonts::dejavu,
+					FONT_CENTERED_X
 				);
 
-				ui::add_button("open preview file button", container, "Open file", fonts::font, [] {
-					base::paths paths;
-					utils::show_file_selector("Blur input", "", {}, os::FileDialog::Type::OpenFile, paths);
+				ui::add_button("open preview file button", container, "Open file", fonts::dejavu, [] {
+					// TODO PORT:
+					// base::paths paths;
+					// utils::show_file_selector("Blur input", "", {}, os::FileDialog::Type::OpenFile, paths);
 
-					if (paths.size() != 1)
-						return; // ??
+					// if (paths.size() != 1)
+					// 	return; // ??
 
-					tasks::add_sample_video(base::from_utf8(paths[0]));
+					// tasks::add_sample_video(u::towstring(paths[0]));
 				});
 			}
 		}
@@ -984,19 +950,18 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 			"config validation error/s",
 			container,
 			validation_res.error,
-			gfx::rgba(255, 50, 50, 255),
-			fonts::font,
-			os::TextAlign::Center,
-			ui::TextStyle::OUTLINE
+			gfx::Color(255, 50, 50, 255),
+			fonts::dejavu,
+			FONT_CENTERED_X | FONT_OUTLINE
 		);
 
-		ui::add_button("fix config button", container, "Reset invalid config options to defaults", fonts::font, [&] {
+		ui::add_button("fix config button", container, "Reset invalid config options to defaults", fonts::dejavu, [&] {
 			config_blur::validate(settings, true);
 		});
 	}
 
-	ui::add_button("open config folder", container, "Open config folder", fonts::font, [] {
-		base::launcher::open_folder(blur.settings_path.string());
+	ui::add_button("open config folder", container, "Open config folder", fonts::dejavu, [] {
+		// base::launcher::open_folder(blur.settings_path.string()); TODO PORT:
 	});
 }
 
@@ -1239,10 +1204,9 @@ void gui::renderer::components::configs::option_information(ui::Container& conta
 		"hovered option info",
 		container,
 		option_explanations.at(hovered),
-		gfx::rgba(255, 255, 255, 255),
-		fonts::font,
-		os::TextAlign::Center,
-		ui::TextStyle::OUTLINE
+		gfx::Color::white(),
+		fonts::dejavu,
+		FONT_CENTERED_X | FONT_OUTLINE
 	);
 }
 
@@ -1321,9 +1285,9 @@ void gui::renderer::components::configs::screen(
 			"config loading text",
 			config_container,
 			"Loading config...",
-			gfx::rgba(255, 255, 255, 100),
-			fonts::font,
-			os::TextAlign::Center
+			gfx::Color::white(100),
+			fonts::dejavu,
+			FONT_CENTERED_X
 		);
 
 		ui::center_elements_in_container(config_container);
@@ -1334,12 +1298,12 @@ void gui::renderer::components::configs::screen(
 
 	if (config_changed) {
 		ui::set_next_same_line(nav_container);
-		ui::add_button("save button", nav_container, "Save", fonts::font, [&] {
+		ui::add_button("save button", nav_container, "Save", fonts::dejavu, [&] {
 			save_config();
 		});
 
 		ui::set_next_same_line(nav_container);
-		ui::add_button("reset changes button", nav_container, "Reset changes", fonts::font, [&] {
+		ui::add_button("reset changes button", nav_container, "Reset changes", fonts::dejavu, [&] {
 			settings = current_global_settings;
 			on_load();
 		});
@@ -1347,7 +1311,7 @@ void gui::renderer::components::configs::screen(
 
 	if (settings != BlurSettings{}) {
 		ui::set_next_same_line(nav_container);
-		ui::add_button("restore defaults button", nav_container, "Restore defaults", fonts::font, [&] {
+		ui::add_button("restore defaults button", nav_container, "Restore defaults", fonts::dejavu, [&] {
 			settings = BlurSettings{};
 			parse_interp();
 		});
@@ -1360,10 +1324,9 @@ void gui::renderer::components::configs::screen(
 
 // NOLINTBEGIN(readability-function-size,readability-function-cognitive-complexity)
 
-bool gui::renderer::redraw_window(os::Window* window, bool force_render) {
+bool gui::renderer::redraw_window(bool force_render) {
 	ui::on_frame_start();
-
-	set_cursor_this_frame = false;
+	sdl::on_frame_start();
 
 	auto now = std::chrono::steady_clock::now();
 	static auto last_frame_time = now;
@@ -1378,7 +1341,7 @@ bool gui::renderer::redraw_window(os::Window* window, bool force_render) {
 	float delta_time = NAN;
 
 	if (first) {
-		delta_time = DEFAULT_DELTA_TIME;
+		delta_time = sdl::DEFAULT_DELTA_TIME;
 		first = false;
 	}
 	else {
@@ -1394,29 +1357,28 @@ bool gui::renderer::redraw_window(os::Window* window, bool force_render) {
 // fps = (fps * FPS_SMOOTHING) + (current_fps * (1.0f - FPS_SMOOTHING));
 #endif
 
-		delta_time = std::min(time_since_last_frame, MIN_DELTA_TIME);
+		delta_time = std::min(time_since_last_frame, sdl::MIN_DELTA_TIME);
 	}
 
 	last_frame_time = now;
 
-	os::Surface* surface = window->surface();
-	const gfx::Rect rect = surface->bounds();
+	const gfx::Rect rect(gfx::Point(0, 0), render::window_size);
 
 	static float bg_overlay_shade = 0.f;
 	float last_fill_shade = bg_overlay_shade;
-	bg_overlay_shade = u::lerp(bg_overlay_shade, drag_handler::dragging ? 30.f : 0.f, 25.f * delta_time);
+	// bg_overlay_shade = u::lerp(bg_overlay_shade, drag_handler::dragging ? 30.f : 0.f, 25.f * delta_time); TODO PORT:
 	force_render |= bg_overlay_shade != last_fill_shade;
 
 	gfx::Rect nav_container_rect = rect;
 	nav_container_rect.h = 70;
 	nav_container_rect.y = rect.y2() - nav_container_rect.h;
 
-	ui::reset_container(nav_container, nav_container_rect, fonts::font.getSize(), {});
+	ui::reset_container(nav_container, nav_container_rect, fonts::dejavu.height(), {});
 
 	int nav_cutoff = rect.y2() - nav_container_rect.y;
 	int bottom_pad = std::max(PAD_Y, nav_cutoff);
 
-	const static int main_pad_x = std::min(100, window->width() / 10); // bit of magic never hurt anyone
+	const static int main_pad_x = std::min(100, render::window_size.w / 10); // bit of magic never hurt anyone
 	ui::reset_container(main_container, rect, 13, ui::Padding{ PAD_Y, main_pad_x, bottom_pad, main_pad_x });
 
 	const int config_page_container_gap = PAD_X / 2;
@@ -1436,7 +1398,7 @@ bool gui::renderer::redraw_window(os::Window* window, bool force_render) {
 	ui::reset_container(
 		config_preview_container,
 		config_preview_container_rect,
-		fonts::font.getSize(),
+		fonts::dejavu.height(),
 		ui::Padding{ PAD_Y, PAD_X, bottom_pad, PAD_X }
 	);
 
@@ -1461,7 +1423,7 @@ bool gui::renderer::redraw_window(os::Window* window, bool force_render) {
 			if (initialisation_res && initialisation_res->success) {
 				auto current_render = rendering.get_current_render();
 				if (current_render) {
-					ui::add_button("stop render button", nav_container, "Stop current render", fonts::font, [] {
+					ui::add_button("stop render button", nav_container, "Stop current render", fonts::dejavu, [] {
 						auto current_render = rendering.get_current_render();
 						if (current_render)
 							(*current_render)->stop();
@@ -1469,7 +1431,7 @@ bool gui::renderer::redraw_window(os::Window* window, bool force_render) {
 				}
 
 				ui::set_next_same_line(nav_container);
-				ui::add_button("config button", nav_container, "Config", fonts::font, [] {
+				ui::add_button("config button", nav_container, "Config", fonts::dejavu, [] {
 					screen = Screens::CONFIG;
 				});
 			}
@@ -1480,7 +1442,7 @@ bool gui::renderer::redraw_window(os::Window* window, bool force_render) {
 		}
 		case Screens::CONFIG: {
 			ui::set_next_same_line(nav_container);
-			ui::add_button("back button", nav_container, "Back", fonts::font, [] {
+			ui::add_button("back button", nav_container, "Back", fonts::dejavu, [] {
 				screen = Screens::MAIN;
 			});
 
@@ -1513,72 +1475,70 @@ bool gui::renderer::redraw_window(os::Window* window, bool force_render) {
 		// note: DONT RENDER ANYTHING ABOVE HERE!!! todo: render queue?
 		return false;
 
-	// background
-	render::rect_filled(surface, rect, gfx::rgba(0, 0, 0, 255));
-
-#if DEBUG_RENDER
+	render::imgui.begin(sdl::window);
 	{
-		// debug
-		static const int debug_box_size = 30;
-		static float x = rect.x2() - debug_box_size;
-		static float y = 100.f;
-		static bool right = false;
-		static bool down = true;
-		x += 1.f * (right ? 1 : -1);
-		y += 1.f * (down ? 1 : -1);
-
-		render::rect_filled(surface, gfx::Rect(x, y, debug_box_size, debug_box_size), gfx::rgba(255, 0, 0, 50));
-
-		if (right) {
-			if (x + debug_box_size > rect.x2())
-				right = false;
-		}
-		else {
-			if (x < 0)
-				right = true;
-		}
-
-		if (down) {
-			if (y + debug_box_size > rect.y2())
-				down = false;
-		}
-		else {
-			if (y < 0)
-				down = true;
-		}
-	}
-#endif
-
-	ui::render_container(surface, main_container);
-	ui::render_container(surface, config_container);
-	ui::render_container(surface, config_preview_container);
-	ui::render_container(surface, option_information_container);
-	ui::render_container(surface, nav_container);
-	ui::render_container(surface, notification_container);
-
-	// file drop overlay
-	if ((int)bg_overlay_shade > 0)
-		render::rect_filled(surface, rect, gfx::rgba(255, 255, 255, (gfx::ColorComponent)bg_overlay_shade));
+		// background
+		render::rect_filled(rect, gfx::Color(0, 0, 0, 255));
 
 #if DEBUG_RENDER
-	if (fps != -1.f) {
-		gfx::Point fps_pos(rect.x2() - PAD_X, rect.y + PAD_Y);
-		render::text(
-			surface,
-			fps_pos,
-			gfx::rgba(0, 255, 0, 255),
-			std::format("{:.0f} fps", fps),
-			fonts::font,
-			os::TextAlign::Right
-		);
-	}
+		{
+			// debug
+			static const int debug_box_size = 30;
+			static float x = rect.x2() - debug_box_size;
+			static float y = 100.f;
+			static bool right = false;
+			static bool down = true;
+			x += 1.f * (right ? 1 : -1);
+			y += 1.f * (down ? 1 : -1);
+
+			render::rect_filled(gfx::Rect(x, y, debug_box_size, debug_box_size), gfx::Color(255, 0, 0, 50));
+
+			if (right) {
+				if (x + debug_box_size > rect.x2())
+					right = false;
+			}
+			else {
+				if (x < 0)
+					right = true;
+			}
+
+			if (down) {
+				if (y + debug_box_size > rect.y2())
+					down = false;
+			}
+			else {
+				if (y < 0)
+					down = true;
+			}
+		}
 #endif
 
-	// todo: whats this do
-	if (!window->isVisible())
-		window->setVisible(true);
+		ui::render_container(main_container);
+		ui::render_container(config_container);
+		ui::render_container(config_preview_container);
+		ui::render_container(option_information_container);
+		ui::render_container(nav_container);
+		ui::render_container(notification_container);
 
-	window->invalidateRegion(gfx::Region(rect));
+		// file drop overlay
+		if ((int)bg_overlay_shade > 0)
+			render::rect_filled(rect, gfx::Color::white(bg_overlay_shade));
+
+#if DEBUG_RENDER
+		if (fps != -1.f) {
+			gfx::Point fps_pos(rect.x2() - PAD_X, rect.y + PAD_Y);
+			render::text(
+				surface,
+				fps_pos,
+				gfx::Color(0, 255, 0, 255),
+				std::format("{:.0f} fps", fps),
+				fonts::dejavu,
+				os::TextAlign::Right
+			);
+		}
+#endif
+	}
+	render::imgui.end(sdl::window);
 
 	return want_to_render;
 }
@@ -1626,26 +1586,26 @@ void gui::renderer::add_notification(
 void gui::renderer::on_render_finished(Render* render, const RenderResult& result) {
 	if (result.stopped) {
 		add_notification(
-			std::format("Render '{}' stopped", base::to_utf8(render->get_video_name())), ui::NotificationType::INFO
+			std::format("Render '{}' stopped", u::tostring(render->get_video_name())), ui::NotificationType::INFO
 		);
 	}
 	else if (result.success) {
 		auto output_path = render->get_output_video_path();
 
 		add_notification(
-			std::format("Render '{}' completed", base::to_utf8(render->get_video_name())),
+			std::format("Render '{}' completed", u::tostring(render->get_video_name())),
 			ui::NotificationType::SUCCESS,
 			[output_path] {
-				base::launcher::open_folder(output_path.string());
+				// base::launcher::open_folder(output_path.string()); TODO PORT:
 			}
 		);
 	}
 	else {
 		add_notification(
-			std::format("Render '{}' failed. Click to copy error message", base::to_utf8(render->get_video_name())),
+			std::format("Render '{}' failed. Click to copy error message", u::tostring(render->get_video_name())),
 			ui::NotificationType::NOTIF_ERROR,
 			[result] {
-				clip::set_text(result.error_message);
+				// clip::set_text(result.error_message); TODO PORT:
 				add_notification(
 					"Copied error message to clipboard",
 					ui::NotificationType::INFO,
@@ -1668,7 +1628,7 @@ void gui::renderer::render_notifications() {
 			notification_container,
 			it->text,
 			it->type,
-			fonts::font,
+			fonts::dejavu,
 			it->on_click_fn
 		);
 

@@ -2,16 +2,23 @@
 
 #include <common/common_pch.h>
 
-// dependencies
-#include <base/paths.h>
-#include <base/system_console.h>
-#include <os/os.h>
+#include <boost/process.hpp>
+#include <boost/asio.hpp>
+#ifdef _WIN32
+#	include <boost/process/v1/windows.hpp>
+#endif
 
-#include <os/skia/skia_helpers.h>
-#include <os/skia/skia_surface.h>
+// NOLINTEND(misc-include-cleaner)
 
-#include <include/core/SkTextBlob.h>
-#include <include/utils/SkTextUtils.h>
-#include <include/core/SkFont.h>
-#include <include/core/SkTypeface.h>
-#include <include/core/SkData.h>
+#include "render/primitives/color.h"
+#include "render/primitives/point.h"
+#include "render/primitives/rect.h"
+#include "render/primitives/size.h"
+#include "render/primitives/primitives_impl.h"
+
+#include <glad/glad.h>
+
+#include <SDL3/SDL.h>
+// #include <SDL3/SDL_opengl.h>
+
+#define IMGUI_USER_CONFIG "gui/render/imconfig.h"

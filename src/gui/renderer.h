@@ -10,12 +10,6 @@ namespace ui {
 }
 
 namespace gui::renderer {
-	namespace fonts {
-		inline SkFont font;
-		inline SkFont header_font;
-		inline SkFont smaller_header_font;
-	}
-
 	struct Notification {
 		std::string id;
 		std::chrono::steady_clock::time_point end_time;
@@ -28,16 +22,9 @@ namespace gui::renderer {
 	inline const float NOTIFICATION_LENGTH = 4.f;
 	inline std::mutex notification_mutex;
 
-	inline os::NativeCursor current_cursor;
-	inline bool set_cursor_this_frame = false;
-
 	inline bool just_added_sample_video = false;
 
 	inline std::optional<Render> current_render_copy;
-
-	void init_fonts();
-
-	void set_cursor(os::NativeCursor cursor);
 
 	enum class Screens : uint8_t {
 		MAIN,
@@ -103,7 +90,7 @@ namespace gui::renderer {
 		}
 	}
 
-	bool redraw_window(os::Window* window, bool force_render);
+	bool redraw_window(bool force_render);
 
 	void add_notification(
 		const std::string& id,
