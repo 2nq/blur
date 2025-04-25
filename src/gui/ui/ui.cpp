@@ -53,12 +53,15 @@ namespace {
 
 void ui::reset_container(
 	Container& container,
+	SDL_Window* window,
 	const gfx::Rect& rect,
 	int element_gap,
 	const std::optional<Padding>& padding,
 	float line_height,
 	std::optional<gfx::Color> background_color
 ) {
+	container.window = window;
+
 	container.rect = rect;
 
 	container.current_position = rect.origin();

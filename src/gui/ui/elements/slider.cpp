@@ -26,8 +26,8 @@ namespace {
 
 		gfx::Point tooltip_pos = label_pos.offset_y(LINE_HEIGHT_ADD + slider_data.font->height());
 		if (!slider_data.tooltip.empty()) {
-			tooltip_pos.y += LINE_HEIGHT_ADD + slider_data.font->height();
-			track_rect.y += LINE_HEIGHT_ADD + slider_data.font->height();
+			tooltip_pos.y += LINE_HEIGHT_ADD;
+			track_rect.y += LINE_HEIGHT_ADD;
 		}
 
 		return {

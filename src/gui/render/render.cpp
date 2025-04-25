@@ -6,18 +6,19 @@
 #include <misc/freetype/imgui_freetype.h>
 
 #include "../fonts/dejavu_sans.h"
+#include "../fonts/eb_garamond.h"
 
 #ifndef M_PI
 #	define M_PI 3.1415926535897932384626433832
 #endif
 
 template<typename T>
-inline constexpr T rad_to_deg(T radian) {
+static constexpr T rad_to_deg(T radian) {
 	return radian * (180.f / M_PI);
 }
 
 template<typename T>
-inline constexpr T deg_to_rad(T degree) {
+static constexpr T deg_to_rad(T degree) {
 	return static_cast<T>(degree * (M_PI / 180.f));
 }
 
@@ -103,13 +104,11 @@ bool render::init(SDL_Window* window, const SDL_GLContext& context) {
 		))
 		return false;
 
-	if (!fonts::header_font.init(
-			DejaVuSans_compressed_data, DejaVuSans_compressed_size, 13.f, &small_font_cfg, glyph_ranges
-		))
+	if (!fonts::header_font.init(EbGaramond_compressed_data, EbGaramond_compressed_size, 30.f, nullptr, glyph_ranges))
 		return false;
 
 	if (!fonts::smaller_header_font.init(
-			DejaVuSans_compressed_data, DejaVuSans_compressed_size, 13.f, &small_font_cfg, glyph_ranges
+			EbGaramond_compressed_data, EbGaramond_compressed_size, 18.f, nullptr, glyph_ranges
 		))
 		return false;
 
@@ -149,7 +148,13 @@ void render::ImGuiWrap::end(SDL_Window* window) {
 	ImVec4 clear_colour = ImVec4(0.f, 0.f, 0.f, 1.f);
 
 	ImGui::Render();
-	glViewport(0, 0, window_size.w, window_size.h);
+
+	int drawable_width = 0;
+	int drawable_height = 0;
+	SDL_GetWindowSizeInPixels(window, &drawable_width, &drawable_height);
+
+	glViewport(0, 0, drawable_width, drawable_height);
+
 	glClearColor(
 		clear_colour.x * clear_colour.w,
 		clear_colour.y * clear_colour.w,

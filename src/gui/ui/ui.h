@@ -225,6 +225,8 @@ namespace ui {
 	const inline AnimationInitialisation DEFAULT_ANIMATION = { .speed = 25.f };
 
 	struct Container {
+		SDL_Window* window;
+
 		gfx::Rect rect;
 		std::optional<gfx::Color> background_color;
 		std::unordered_map<std::string, AnimatedElement> elements;
@@ -299,6 +301,7 @@ namespace ui {
 
 	void reset_container(
 		Container& container,
+		SDL_Window* window,
 		const gfx::Rect& rect,
 		int element_gap,
 		const std::optional<Padding>& padding = {},
