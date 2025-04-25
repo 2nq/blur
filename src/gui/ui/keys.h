@@ -7,12 +7,6 @@ namespace keys {
 	inline std::unordered_set<std::uint8_t> pressing_keys;
 	inline std::unordered_set<std::uint8_t> handled_keys;
 
-	inline bool text_input_active;
-	inline std::string text_input_composition;
-	inline int text_input_cursor;
-	inline int text_input_selection_start;
-	inline int text_input_selection_length;
-
 	inline float scroll_delta = 0.f;
 	inline float scroll_delta_precise = 0.f;
 

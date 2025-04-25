@@ -271,6 +271,7 @@ namespace ui {
 	inline auto hasher = std::hash<std::string>{};
 
 	inline AnimatedElement* active_element = nullptr;
+	inline std::vector<SDL_Event> text_event_queue;
 
 	inline const auto HIGHLIGHT_COLOR = gfx::Color(133, 24, 16, 255);
 	inline const int TYPE_SWITCH_PADDING = 5;

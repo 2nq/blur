@@ -16,6 +16,20 @@ const gfx::Color COMPOSITION_BG_COLOR(60, 60, 100, 150);
 const gfx::Color SELECTION_COLOR(100, 100, 200, 100);
 
 namespace {
+	struct TextInputState {
+		int cursor_position = 0;
+		int selection_start = 0;
+		int selection_end = 0;
+		bool has_selection = false;
+		int text_scroll_offset = 0;
+		std::string composition_text;
+		int composition_cursor = 0;
+		int composition_selection_start = 0;
+		int composition_selection_length = 0;
+	};
+
+	inline std::unordered_map<std::string, TextInputState> text_input_map;
+
 	struct Positions {
 		gfx::Point label_pos;
 		gfx::Rect input_rect;
@@ -128,20 +142,6 @@ namespace {
 	}
 }
 
-struct TextInputState {
-	int cursor_position = 0;
-	int selection_start = 0;
-	int selection_end = 0;
-	bool has_selection = false;
-	int text_scroll_offset = 0;
-	std::string composition_text;
-	int composition_cursor = 0;
-	int composition_selection_start = 0;
-	int composition_selection_length = 0;
-};
-
-std::unordered_map<std::string, TextInputState> input_map;
-
 void ui::render_text_input(const Container& container, const AnimatedElement& element) {
 	const auto& input_data = std::get<TextInputElementData>(element.element->data);
 
@@ -151,7 +151,7 @@ void ui::render_text_input(const Container& container, const AnimatedElement& el
 
 	auto pos = get_positions(container, input_data, element);
 
-	auto& input = input_map.at(element.element->id);
+	auto& input = text_input_map.at(element.element->id);
 
 	// Render label
 	render::text(pos.label_pos, gfx::Color(255, 255, 255, anim * 255), input_data.placeholder, *input_data.font);
@@ -293,7 +293,7 @@ bool ui::update_text_input(const Container& container, AnimatedElement& element)
 
 	auto pos = get_positions(container, input_data, element);
 
-	auto& input = input_map.at(element.element->id);
+	auto& input = text_input_map.at(element.element->id);
 
 	bool hovered = pos.input_rect.contains(keys::mouse_pos) && set_hovered_element(element);
 
@@ -339,8 +339,6 @@ bool ui::update_text_input(const Container& container, AnimatedElement& element)
 
 	// Handle text editing and input events
 	if (active) {
-		SDL_Event event;
-
 		// Handle key events first (cursor movement, deletion, etc.)
 		if (keys::is_key_pressed(SDL_SCANCODE_LEFT)) {
 			if (keys::is_key_down(SDL_SCANCODE_LSHIFT) || keys::is_key_down(SDL_SCANCODE_RSHIFT)) {
@@ -534,7 +532,9 @@ bool ui::update_text_input(const Container& container, AnimatedElement& element)
 		}
 
 		// Process SDL text input events
-		while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_EVENT_TEXT_EDITING, SDL_EVENT_TEXT_INPUT) > 0) {
+		while (!text_event_queue.empty()) {
+			auto& event = text_event_queue.front();
+
 			if (event.type == SDL_EVENT_TEXT_EDITING) {
 				// Handle text editing (composition)
 				input.composition_text = event.edit.text;
@@ -572,6 +572,8 @@ bool ui::update_text_input(const Container& container, AnimatedElement& element)
 					(*input_data.on_change)(*input_data.text);
 				}
 			}
+
+			text_event_queue.erase(text_event_queue.begin());
 		}
 	}
 
@@ -589,8 +591,8 @@ ui::Element& ui::add_text_input(
 	// Calculate proper height based on font height and padding
 	const gfx::Size input_size(200, font.height() + LABEL_GAP + font.height() + (TEXT_INPUT_PADDING.h * 2));
 
-	if (!input_map.contains(id))
-		input_map.emplace(id, TextInputState{});
+	if (!text_input_map.contains(id))
+		text_input_map.emplace(id, TextInputState{});
 
 	Element element(
 		id,

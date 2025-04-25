@@ -324,6 +324,9 @@ void ui::on_update_input_end() {
 	keys::scroll_delta = 0.f;
 	keys::scroll_delta_precise = 0.f;
 
+	// empty text events if they werent processed for some reason
+	text_event_queue.clear();
+
 	// set cursor based on if an element wanted pointer
 	sdl::set_cursor(desired_cursor);
 	desired_cursor = SDL_SYSTEM_CURSOR_DEFAULT;
