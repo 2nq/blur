@@ -1,7 +1,3 @@
-#include <algorithm>
-
-#include <algorithm>
-
 #include "../ui.h"
 #include "../../render/render.h"
 #include "../keys.h"
@@ -46,7 +42,7 @@
 #define STB_TEXTEDIT_K_WORDLEFT  (SDL_SCANCODE_LEFT | STB_TEXTEDIT_K_CTRL)  // Use the flag bit
 #define STB_TEXTEDIT_K_WORDRIGHT (SDL_SCANCODE_RIGHT | STB_TEXTEDIT_K_CTRL) // Use the flag bit
 
-#include "stb_textedit.h"
+#include <stb_textedit.h>
 
 const int LABEL_GAP = 10;
 const float TEXT_INPUT_ROUNDING = 2.5f;
@@ -257,7 +253,7 @@ namespace {
 #define STB_TEXTEDIT_MOVEWORDLEFT  move_word_left
 
 #define STB_TEXTEDIT_IMPLEMENTATION
-#include "stb_textedit.h"
+#include <stb_textedit.h>
 
 namespace {
 	void handle_text_input_event(
@@ -591,6 +587,7 @@ bool ui::update_text_input(const Container& container, AnimatedElement& element)
 		}
 
 		// --- Handle Mouse Drag ---
+		// TODO: fix after already focused
 		if (state.active && keys::is_mouse_dragging(SDL_BUTTON_LEFT)) {
 			// Check if drag started on this element (requires keys::drag_start_element_id or similar)
 			// if (keys::drag_start_element_id == element.element->id) {

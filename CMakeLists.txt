@@ -127,9 +127,11 @@ add_executable(
   ${RESOURCES})
 
 # imgui
-target_include_directories(blur-gui
-                            PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/imgui)
+target_include_directories(blur-gui PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/imgui)
 target_compile_definitions(blur-gui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
+
+# stb
+target_include_directories(blur-gui PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/stb)
 
 target_link_libraries(
   blur-gui
