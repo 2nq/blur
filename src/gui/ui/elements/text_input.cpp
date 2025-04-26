@@ -50,6 +50,7 @@
 
 const int LABEL_GAP = 10;
 const float TEXT_INPUT_ROUNDING = 2.5f;
+const int SCROLL_CURSOR_RIGHT_GAP = 15;
 const gfx::Size TEXT_INPUT_PADDING(10, 5);
 const gfx::Color BORDER_COLOR(70, 70, 70, 255);
 const gfx::Color ACTIVE_BORDER_COLOR(90, 90, 90, 255);
@@ -444,6 +445,19 @@ void ui::render_text_input(const Container& container, const AnimatedElement& el
 	const std::string& display_text = *input_data.text; // Assumes text ptr is valid
 	gfx::Color current_text_color = TEXT_COLOR.adjust_alpha(anim);
 	gfx::Point current_text_pos = pos.text_pos;
+
+	// Calculate the total width of the text to determine overflow
+	float text_width = input_data.font->calc_size(display_text).w;
+
+	// Horizontal Scrolling Logic: Shift text position if it's too wide
+	if (text_width > clip_rect.w) {
+		int cursor_x = get_cursor_x(input_data, state.edit_state.cursor, gfx::Point(0, 0));
+		int scroll_offset = std::max(0, cursor_x - (clip_rect.w - SCROLL_CURSOR_RIGHT_GAP));
+		current_text_pos.x = current_text_pos.x - scroll_offset;
+	}
+
+	// Handle vertical scrolling if needed (optional, depending on requirements)
+	// If text overflows vertically (height of text exceeds clip_rect height), we could add vertical scrolling logic
 
 	if (display_text.empty() && !state.active && !input_data.placeholder.empty()) {
 		gfx::Color current_placeholder_color = PLACEHOLDER_COLOR.adjust_alpha(anim);
