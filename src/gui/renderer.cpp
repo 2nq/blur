@@ -148,16 +148,32 @@ void gui::renderer::components::main_screen(ui::Container& container, float delt
 		}
 
 		ui::add_button("open file button", container, "Open files", fonts::dejavu, [] {
-			// TODO PORT:
-			// base::paths paths;
-			// utils::show_file_selector("Blur input", "", {}, os::FileDialog::Type::OpenFiles, paths);
+			static auto file_callback = [](void* userdata, const char* const* files, int filter) {
+				if (files && *files) {
+					std::vector<std::wstring> wpaths;
 
-			// std::vector<std::wstring> wpaths;
-			// for (const auto path : paths) {
-			// 	wpaths.push_back(u::towstring(path));
-			// }
+					std::span<const char* const> span_files(files, SIZE_MAX); // big size, we stop manually
 
-			// tasks::add_files(wpaths);
+					for (const auto& file : span_files) {
+						if (file == nullptr)
+							break; // null-terminated array
+
+						wpaths.push_back(u::towstring(file));
+					}
+
+					tasks::add_files(wpaths);
+				}
+			};
+
+			SDL_ShowOpenFileDialog(
+				file_callback, // Properly typed callback function
+				nullptr,       // userdata
+				nullptr,       // parent window (nullptr for default)
+				nullptr,       // file filters
+				0,             // number of filters
+				"",            // default path
+				true           // allow multiple files
+			);
 		});
 
 		ui::add_text(
@@ -845,7 +861,8 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 							"Failed to generate config preview. Click to copy error message",
 							ui::NotificationType::NOTIF_ERROR,
 							[res] {
-								// clip::set_text(res.error_message); TODO PORT:
+								SDL_SetClipboardText(res.error_message.c_str());
+
 								add_notification(
 									"Copied error message to clipboard",
 									ui::NotificationType::INFO,
@@ -927,20 +944,29 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 				);
 
 				ui::add_button("open preview file button", container, "Open file", fonts::dejavu, [] {
-					// TODO PORT:
-					// base::paths paths;
-					// utils::show_file_selector("Blur input", "", {}, os::FileDialog::Type::OpenFile, paths);
+					static auto file_callback = [](void* userdata, const char* const* files, int filter) {
+						if (files != nullptr && *files != nullptr) {
+							const char* file = *files;
+							tasks::add_sample_video(u::towstring(file));
+						}
+					};
 
-					// if (paths.size() != 1)
-					// 	return; // ??
-
-					// tasks::add_sample_video(u::towstring(paths[0]));
+					SDL_ShowOpenFileDialog(
+						file_callback, // callback
+						nullptr,       // userdata
+						nullptr,       // parent window
+						nullptr,       // file filters
+						0,             // number of filters
+						"",            // default path
+						false          // allow multiple files
+					);
 				});
 			}
 		}
 	}
 	catch (std::filesystem::filesystem_error& e) {
 		// i have no idea. std::filesystem::exists threw?
+		u::log_error("std::filesystem::exists threw");
 	}
 
 	ui::add_separator("config preview separator", container, ui::SeparatorStyle::FADE_BOTH);
@@ -962,7 +988,11 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 	}
 
 	ui::add_button("open config folder", container, "Open config folder", fonts::dejavu, [] {
-		// base::launcher::open_folder(blur.settings_path.string()); TODO PORT:
+		// Convert path to a file:// URL for SDL_OpenURL
+		std::string file_url = "file://" + blur.settings_path.string();
+		if (!SDL_OpenURL(file_url.c_str())) {
+			u::log_error("Failed to open config folder: {}", SDL_GetError());
+		}
 	});
 }
 
@@ -1609,7 +1639,11 @@ void gui::renderer::on_render_finished(Render* render, const RenderResult& resul
 			std::format("Render '{}' completed", u::tostring(render->get_video_name())),
 			ui::NotificationType::SUCCESS,
 			[output_path] {
-				// base::launcher::open_folder(output_path.string()); TODO PORT:
+				// Convert path to a file:// URL for SDL_OpenURL
+				std::string file_url = "file://" + output_path.string();
+				if (!SDL_OpenURL(file_url.c_str())) {
+					u::log_error("Failed to open output folder: {}", SDL_GetError());
+				}
 			}
 		);
 	}
@@ -1618,7 +1652,8 @@ void gui::renderer::on_render_finished(Render* render, const RenderResult& resul
 			std::format("Render '{}' failed. Click to copy error message", u::tostring(render->get_video_name())),
 			ui::NotificationType::NOTIF_ERROR,
 			[result] {
-				// clip::set_text(result.error_message); TODO PORT:
+				SDL_SetClipboardText(result.error_message.c_str());
+
 				add_notification(
 					"Copied error message to clipboard",
 					ui::NotificationType::INFO,
