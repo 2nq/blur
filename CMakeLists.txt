@@ -26,6 +26,7 @@ find_package(cpr CONFIG REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system filesystem)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
+find_package(SDL3_image CONFIG REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(glad CONFIG REQUIRED)
 
@@ -107,35 +108,26 @@ else()
 endif()
 
 # cli
-add_executable(
-  blur-cli
-  ${COMMON_SOURCES}
-  ${CLI_SOURCES}
-  ${RESOURCES})
-target_link_libraries(
-  blur-cli
-  PRIVATE CLI11::CLI11)
+add_executable(blur-cli ${COMMON_SOURCES} ${CLI_SOURCES} ${RESOURCES})
+target_link_libraries(blur-cli PRIVATE CLI11::CLI11)
 target_precompile_headers(blur-cli PRIVATE src/cli/cli_pch.h)
 setup_target(blur-cli)
 
 # gui
-add_executable(
-  blur-gui WIN32
-  ${COMMON_SOURCES}
-  ${GUI_SOURCES}
-  ${IMGUI_SOURCES}
-  ${RESOURCES})
+add_executable(blur-gui WIN32 ${COMMON_SOURCES} ${GUI_SOURCES} ${IMGUI_SOURCES}
+                              ${RESOURCES})
 
 # imgui
-target_include_directories(blur-gui PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/imgui)
+target_include_directories(blur-gui
+                           PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/imgui)
 target_compile_definitions(blur-gui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
 # stb
-target_include_directories(blur-gui PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/stb)
+target_include_directories(blur-gui
+                           PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/stb)
 
-target_link_libraries(
-  blur-gui
-  PRIVATE ZLIB::ZLIB SDL3::SDL3 Freetype::Freetype glad::glad)
+target_link_libraries(blur-gui PRIVATE SDL3::SDL3 SDL3_image::SDL3_image
+                                       Freetype::Freetype glad::glad)
 
 target_precompile_headers(blur-gui PRIVATE src/gui/gui_pch.h)
 

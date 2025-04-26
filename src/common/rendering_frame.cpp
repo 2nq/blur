@@ -51,6 +51,8 @@ RenderCommandsResult FrameRender::build_render_commands(
 		L"-", // piped output from video script
 		L"-vframes",
 		L"1", // render 1 frame
+		L"-q:v",
+		L"2",
 		L"-y",
 		output_path.wstring(),
 	};
@@ -210,7 +212,7 @@ FrameRender::RenderResponse FrameRender::render(const std::filesystem::path& inp
 		};
 	}
 
-	std::filesystem::path output_path = m_temp_path / "render.png";
+	std::filesystem::path output_path = m_temp_path / "render.jpg";
 
 	// render
 	auto render_commands_res = build_render_commands(input_path, output_path, settings);

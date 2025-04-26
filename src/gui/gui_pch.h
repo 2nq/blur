@@ -13,5 +13,6 @@
 
 #include <SDL3/SDL.h>
 // #include <SDL3/SDL_opengl.h>
+#include <SDL3_image/SDL_image.h>
 
 #define IMGUI_USER_CONFIG "gui/render/imconfig.h"

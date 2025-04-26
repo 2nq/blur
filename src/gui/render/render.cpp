@@ -486,6 +486,130 @@ void render::text(
 	ImGui::PopFont();
 }
 
+// Implementation of the Texture class
+render::Texture::~Texture() {
+	destroy();
+}
+
+bool render::Texture::load_from_file(const std::string& path) {
+	// Use SDL to load the image
+	SDL_Surface* surface = IMG_Load(path.c_str());
+
+	if (!surface) {
+		u::log_error("Failed to load image: {}", SDL_GetError());
+		return false;
+	}
+
+	// Convert to RGBA format if needed
+	SDL_Surface* rgb_surface = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+	SDL_DestroySurface(surface);
+
+	if (!rgb_surface) {
+		u::log_error("Failed to convert surface: {}", SDL_GetError());
+		return false;
+	}
+
+	bool result = load_from_surface(rgb_surface);
+	SDL_DestroySurface(rgb_surface);
+
+	return result;
+}
+
+bool render::Texture::load_from_surface(SDL_Surface* surface) {
+	if (!surface)
+		return false;
+
+	// Delete old texture if exists
+	destroy();
+
+	// Create a new texture
+	glGenTextures(1, &m_id);
+	glBindTexture(GL_TEXTURE_2D, m_id);
+
+	// Setup texture parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// Upload pixels into texture
+	GLenum format = GL_RGBA;
+	glTexImage2D(GL_TEXTURE_2D, 0, format, surface->w, surface->h, 0, format, GL_UNSIGNED_BYTE, surface->pixels);
+
+	m_width = surface->w;
+	m_height = surface->h;
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	return true;
+}
+
+void render::Texture::destroy() {
+	if (m_id) {
+		glDeleteTextures(1, &m_id);
+		m_id = 0;
+		m_width = 0;
+		m_height = 0;
+	}
+}
+
+void render::Texture::bind() const {
+	glBindTexture(GL_TEXTURE_2D, m_id);
+}
+
+void render::Texture::unbind() const {
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+// Image rendering functions
+void render::image(const gfx::Rect& rect, const Texture& texture, const gfx::Color& tint_color) {
+	if (!texture.is_valid())
+		return;
+
+	imgui.drawlist->AddImage(
+		texture.get_id(), rect.origin(), rect.max(), ImVec2(0, 0), ImVec2(1, 1), tint_color.to_imgui()
+	);
+}
+
+void render::image_rounded(
+	const gfx::Rect& rect,
+	const Texture& texture,
+	float rounding,
+	unsigned int rounding_flags,
+	const gfx::Color& tint_color
+) {
+	if (!texture.is_valid())
+		return;
+
+	imgui.drawlist->AddImageRounded(
+		texture.get_id(),
+		rect.origin(),
+		rect.max(),
+		ImVec2(0, 0),
+		ImVec2(1, 1),
+		tint_color.to_imgui(),
+		rounding,
+		rounding_flags
+	);
+}
+
+void render::image_with_borders(
+	const gfx::Rect& rect,
+	const Texture& texture,
+	float rounding,
+	const gfx::Color& border_color,
+	float border_thickness,
+	unsigned int rounding_flags,
+	const gfx::Color& tint_color
+) {
+	if (!texture.is_valid())
+		return;
+
+	image_rounded(rect.shrink(1), texture, rounding, rounding_flags, tint_color);
+
+	rounded_rect_stroke(rect, border_color, rounding, rounding_flags, border_thickness);
+}
+
 void render::push_clip_rect(const gfx::Rect& rect, bool intersect_clip_rect) {
 	imgui.drawlist->PushClipRect(rect.origin(), rect.max(), intersect_clip_rect);
 }

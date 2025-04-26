@@ -2,13 +2,6 @@
 
 #include "font/font.h"
 
-struct ImGuiContext;
-struct ImGuiIO;
-struct ImDrawList;
-
-class i_texture;
-struct GLFWwindow;
-
 enum EFontFlags : unsigned int {
 	FONT_NONE = 0,
 	FONT_CENTERED_X = (1 << 0),
@@ -48,6 +41,42 @@ namespace fonts {
 namespace render {
 	inline float frametime;
 	inline gfx::Size window_size;
+
+	// Texture wrapper class for OpenGL textures
+	class Texture {
+	public:
+		Texture() : m_id(0), m_width(0), m_height(0) {}
+
+		~Texture();
+
+		bool load_from_file(const std::string& path);
+		bool load_from_surface(SDL_Surface* surface);
+		void destroy();
+
+		void bind() const;
+		void unbind() const;
+
+		[[nodiscard]] ImTextureID get_id() const {
+			return (ImTextureID)(intptr_t)m_id;
+		}
+
+		[[nodiscard]] int width() const {
+			return m_width;
+		}
+
+		[[nodiscard]] int height() const {
+			return m_height;
+		}
+
+		[[nodiscard]] bool is_valid() const {
+			return m_id != 0;
+		}
+
+	private:
+		unsigned int m_id;
+		int m_width;
+		int m_height;
+	};
 
 	struct ImGuiWrap {
 		ImGuiContext* ctx;
@@ -182,6 +211,27 @@ namespace render {
 		const std::string& text,
 		const Font& font,
 		unsigned int flags = FONT_NONE
+	);
+
+	// New image functions
+	void image(const gfx::Rect& rect, const Texture& texture, const gfx::Color& tint_color = gfx::Color::white());
+
+	void image_rounded(
+		const gfx::Rect& rect,
+		const Texture& texture,
+		float rounding,
+		unsigned int rounding_flags = ROUNDING_ALL,
+		const gfx::Color& tint_color = gfx::Color::white()
+	);
+
+	void image_with_borders(
+		const gfx::Rect& rect,
+		const Texture& texture,
+		float rounding,
+		const gfx::Color& border_color,
+		float border_thickness = 1.0f,
+		unsigned int rounding_flags = ROUNDING_ALL,
+		const gfx::Color& tint_color = gfx::Color::white()
 	);
 
 	void push_clip_rect(const gfx::Rect& rect, bool intersect_clip_rect = false);

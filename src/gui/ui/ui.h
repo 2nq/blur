@@ -19,6 +19,7 @@ namespace ui {
 	enum class ElementType : std::uint8_t {
 		BAR,
 		TEXT,
+		IMAGE,
 		BUTTON,
 		NOTIFICATION,
 		SLIDER,
@@ -66,6 +67,18 @@ namespace ui {
 
 		bool operator==(const SeparatorElementData& other) const {
 			return style == other.style;
+		}
+	};
+
+	struct ImageElementData {
+		std::filesystem::path image_path;
+		std::shared_ptr<render::Texture> texture;
+		std::string image_id;
+		gfx::Color image_color;
+
+		bool operator==(const ImageElementData& other) const {
+			return image_path == other.image_path && texture == other.texture && image_id == other.image_id &&
+			       image_color == other.image_color;
 		}
 	};
 
@@ -151,6 +164,7 @@ namespace ui {
 	using ElementData = std::variant<
 		BarElementData,
 		TextElementData,
+		ImageElementData,
 		ButtonElementData,
 		NotificationElementData,
 		SliderElementData,
@@ -280,6 +294,8 @@ namespace ui {
 
 	void render_text(const Container& container, const AnimatedElement& element);
 
+	void render_image(const Container& container, const AnimatedElement& element);
+
 	void render_button(const Container& container, const AnimatedElement& element);
 	bool update_button(const Container& container, AnimatedElement& element);
 
@@ -374,6 +390,15 @@ namespace ui {
 		const render::Font& font,
 		unsigned int flags = EFontFlags::FONT_NONE
 	);
+
+	std::optional<Element*> add_image(
+		const std::string& id,
+		Container& container,
+		const std::filesystem::path& image_path,
+		const gfx::Size& max_size,
+		std::string image_id = "",
+		gfx::Color image_color = gfx::Color::white()
+	); // use image_id to distinguish images that have the same filename and reload it (e.g. if its updated)
 
 	Element& add_button(
 		const std::string& id,

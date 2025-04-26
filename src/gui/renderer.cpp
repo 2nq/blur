@@ -49,17 +49,16 @@ void gui::renderer::components::render(
 
 	std::string preview_path = render.get_preview_path().string();
 	if (!preview_path.empty() && render_status.current_frame > 0) {
-		// TODO PORT:
-		// auto element = ui::add_image(
-		// 	"preview image",
-		// 	container,
-		// 	preview_path,
-		// 	gfx::Size(container.get_usable_rect().w, container.get_usable_rect().h / 2),
-		// 	std::to_string(render_status.current_frame)
-		// );
-		// if (element) {
-		// 	bar_width = (*element)->rect.w;
-		// }
+		auto element = ui::add_image(
+			"preview image",
+			container,
+			preview_path,
+			gfx::Size(container.get_usable_rect().w, container.get_usable_rect().h / 2),
+			std::to_string(render_status.current_frame)
+		);
+		if (element) {
+			bar_width = (*element)->rect.w;
+		}
 	}
 
 	if (render_status.init) {
@@ -891,15 +890,14 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 
 	try {
 		if (!preview_path.empty() && std::filesystem::exists(preview_path) && !error) {
-			// TODO PORT:
-			// auto element = ui::add_image(
-			// 	"config preview image",
-			// 	container,
-			// 	preview_path,
-			// 	container.get_usable_rect().size(),
-			// 	std::to_string(preview_id),
-			// 	gfx::Color::white(loading ? 100 : 255)
-			// );
+			auto element = ui::add_image(
+				"config preview image",
+				container,
+				preview_path,
+				container.get_usable_rect().size(),
+				std::to_string(preview_id),
+				gfx::Color::white(loading ? 100 : 255)
+			);
 		}
 		else {
 			if (sample_video_exists) {
@@ -1582,6 +1580,8 @@ bool gui::renderer::redraw_window(bool force_render) {
 #endif
 	}
 	render::imgui.end(sdl::window);
+
+	// TODO PORT: free images that weren't rendered this frame
 
 	return want_to_render;
 }

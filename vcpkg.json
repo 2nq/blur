@@ -1,19 +1,24 @@
 {
-	"dependencies": [
-		{
-			"name": "boost-asio",
-			"version>=": "1.83.0"
-		},
-		{
-			"name": "boost-process",
-			"version>=": "1.83.0"
-		},
-		"cli11",
-		"cpr",
-		"nlohmann-json",
-		"sdl3",
-		"zlib",
-		"freetype",
-		"glad"
-	]
+  "dependencies": [
+    {
+      "name": "boost-asio",
+      "version>=": "1.83.0"
+    },
+    {
+      "name": "boost-process",
+      "version>=": "1.83.0"
+    },
+    "cli11",
+    "cpr",
+    "freetype",
+    "glad",
+    "nlohmann-json",
+    "sdl3",
+    {
+      "name": "sdl3-image",
+      "features": [
+        "jpeg"
+      ]
+    }
+  ]
 }
