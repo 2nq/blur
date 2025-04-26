@@ -46,13 +46,7 @@ struct BlurSettings {
 	std::string blur_weighting = "equal";
 
 	bool interpolate = true;
-	std::string interpolated_fps =
-
-#ifdef __APPLE__
-		"5x";
-#else
-		"1200";
-#endif
+	std::string interpolated_fps = "5x";
 	std::string interpolation_method = "svp";
 
 	bool pre_interpolate = false;
