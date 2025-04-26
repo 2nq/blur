@@ -2,12 +2,26 @@
 #include "gui/ui/ui.h"
 
 bool keys::process_event(const SDL_Event& event) {
+	if (ui::active_element && ui::active_element->element->type == ui::ElementType::TEXT_INPUT) {
+		switch (event.type) {
+			case SDL_EVENT_KEY_DOWN:
+			case SDL_EVENT_TEXT_EDITING:
+			// case SDL_EVENT_TEXT_EDITING_EXT:
+			case SDL_EVENT_TEXT_INPUT:
+				ui::text_event_queue.push_back(event);
+				return true;
+
+			default:
+				break;
+		}
+	}
+
 	switch (event.type) {
 		case SDL_EVENT_WINDOW_MOUSE_LEAVE: {
 			mouse_pos = { -1, -1 };
 			pressed_mouse_keys.clear(
 			); // fix mouseup not being registered when left the window todo: handle this properly
-			dragging_mouse_keys.clear();
+			held_mouse_keys.clear();
 			return true;
 		}
 
@@ -26,17 +40,17 @@ bool keys::process_event(const SDL_Event& event) {
 			// mouse_pos = position; // TODO: this is inaccurate? if you press open file button move cursor off screen
 			// then close the picker there'll be a mouseup event with mouse pos still on the button
 			pressed_mouse_keys.erase(event.button.button);
-			dragging_mouse_keys.erase(event.button.button);
+			held_mouse_keys.erase(event.button.button);
 			return true;
 		}
 
 		case SDL_EVENT_KEY_DOWN: {
 			pressing_keys.insert(event.key.scancode);
-			break;
+			return true;
 		}
 		case SDL_EVENT_KEY_UP: {
 			pressing_keys.erase(event.key.scancode);
-			break;
+			return true;
 		}
 
 		case SDL_EVENT_MOUSE_WHEEL: {
@@ -45,18 +59,8 @@ bool keys::process_event(const SDL_Event& event) {
 			// 	scroll_delta_precise = event.wheelDelta().y;
 			// else // mouse
 			scroll_delta = -event.wheel.y * 500.f;
-
 			return true;
 		}
-
-		case SDL_EVENT_TEXT_EDITING:
-		// case SDL_EVENT_TEXT_EDITING_EXT:
-		case SDL_EVENT_TEXT_INPUT:
-			if (ui::active_element && ui::active_element->element->type == ui::ElementType::TEXT_INPUT) {
-				ui::text_event_queue.push_back(event);
-				return true;
-			}
-			break;
 
 		default:
 			return false;
@@ -76,7 +80,7 @@ void keys::on_mouse_press_handled(std::uint8_t button) { // TODO:
 	// todo: is this naive and stupid? it seems kinda elegant, i cant think of a situation
 	// where you'd want to press two things with one click
 	pressed_mouse_keys.erase(button);
-	dragging_mouse_keys.insert(button);
+	held_mouse_keys.insert(button);
 }
 
 void keys::on_key_press_handled(std::uint8_t scancode) {
@@ -92,8 +96,12 @@ bool keys::is_mouse_down(std::uint8_t button) {
 	return pressed_mouse_keys.contains(button);
 }
 
+bool keys::is_mouse_pressed(std::uint8_t button) {
+	return pressed_mouse_keys.contains(button) && !held_mouse_keys.contains(button);
+}
+
 bool keys::is_mouse_dragging(std::uint8_t button) {
-	return pressed_mouse_keys.contains(button) || dragging_mouse_keys.contains(button);
+	return pressed_mouse_keys.contains(button) || held_mouse_keys.contains(button);
 }
 
 bool keys::is_key_down(std::uint8_t scancode) {

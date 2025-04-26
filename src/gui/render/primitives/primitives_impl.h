@@ -117,4 +117,28 @@ namespace gfx {
 	constexpr Rect Rect::shrink(const Size& amount, bool centered) const {
 		return expand(Size{ -amount.w, -amount.h }, centered);
 	}
+
+	constexpr Rect& Rect::operator+=(const Point& offset) {
+		x += offset.x;
+		y += offset.y;
+		return *this;
+	}
+
+	constexpr Rect& Rect::operator-=(const Point& offset) {
+		x -= offset.x;
+		y -= offset.y;
+		return *this;
+	}
+
+	constexpr Rect Rect::operator+(const Point& offset) const {
+		Rect result = *this;
+		result += offset;
+		return result;
+	}
+
+	constexpr Rect Rect::operator-(const Point& offset) const {
+		Rect result = *this;
+		result -= offset;
+		return result;
+	}
 }

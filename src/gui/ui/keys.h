@@ -3,7 +3,7 @@
 namespace keys {
 	inline gfx::Point mouse_pos;
 	inline std::unordered_set<std::uint8_t> pressed_mouse_keys;
-	inline std::unordered_set<std::uint8_t> dragging_mouse_keys; // this feels wrong but it works
+	inline std::unordered_set<std::uint8_t> held_mouse_keys; // this feels wrong but it works
 	inline std::unordered_set<std::uint8_t> pressing_keys;
 	inline std::unordered_set<std::uint8_t> handled_keys;
 
@@ -19,6 +19,7 @@ namespace keys {
 
 	bool is_rect_pressed(const gfx::Rect& rect, std::uint8_t button);
 	bool is_mouse_down(std::uint8_t button = SDL_BUTTON_LEFT);
+	bool is_mouse_pressed(std::uint8_t button = SDL_BUTTON_LEFT);
 	bool is_mouse_dragging(std::uint8_t button = SDL_BUTTON_LEFT);
 
 	bool is_key_down(std::uint8_t scancode);

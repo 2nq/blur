@@ -7,6 +7,7 @@ const float HANDLE_WIDTH = 10;
 const int TRACK_HEIGHT = 4;
 const int LINE_HEIGHT_ADD = 7;
 const int TRACK_LABEL_GAP = 10;
+const int TOOLTIP_GAP = 4;
 
 namespace {
 	struct SliderPositions {
@@ -18,17 +19,18 @@ namespace {
 	SliderPositions get_slider_positions(
 		const ui::Container& container, const ui::AnimatedElement& element, const ui::SliderElementData& slider_data
 	) {
-		gfx::Point label_pos = element.element->rect.origin();
-
 		gfx::Rect track_rect = element.element->rect;
-		track_rect.y = label_pos.y + slider_data.font->height() + TRACK_LABEL_GAP;
 		track_rect.h = TRACK_HEIGHT;
 
-		gfx::Point tooltip_pos = label_pos.offset_y(LINE_HEIGHT_ADD + slider_data.font->height());
+		gfx::Point label_pos = track_rect.origin();
+		gfx::Point tooltip_pos = track_rect.origin();
+
 		if (!slider_data.tooltip.empty()) {
-			tooltip_pos.y += LINE_HEIGHT_ADD;
-			track_rect.y += LINE_HEIGHT_ADD;
+			tooltip_pos.y += slider_data.font->height() + TOOLTIP_GAP;
+			track_rect.y += slider_data.font->height() + TOOLTIP_GAP;
 		}
+
+		track_rect.y += slider_data.font->height() + TRACK_LABEL_GAP;
 
 		return {
 			.label_pos = label_pos,

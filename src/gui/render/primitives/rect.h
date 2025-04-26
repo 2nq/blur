@@ -149,5 +149,10 @@ namespace gfx {
 		[[nodiscard]] float mouse_percent_x(bool uncapped = false) const;
 		[[nodiscard]] float mouse_percent_y(bool uncapped = false) const;
 		void clamp_to(const Rect& boundary);
+
+		constexpr Rect operator+(const Point& offset) const;
+		constexpr Rect operator-(const Point& offset) const;
+		constexpr Rect& operator+=(const Point& offset);
+		constexpr Rect& operator-=(const Point& offset);
 	};
 }

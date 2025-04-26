@@ -23,8 +23,6 @@ void config_presets::create(const std::filesystem::path& filepath, const PresetS
 			output << preset_name << ": " << preset_params << "\n";
 		}
 	}
-
-	u::log("created");
 }
 
 PresetSettings config_presets::parse(const std::filesystem::path& config_filepath) {
@@ -134,10 +132,12 @@ std::vector<config_presets::PresetDetails> config_presets::get_available_presets
 
 				if (*it == L"-c:v" || *it == L"-codec:v") {
 					std::wstring codec = *(it - 1);
-					available_presets.push_back({
-						.name = preset_name,
-						.codec = u::tostring(codec),
-					});
+					available_presets.push_back(
+						{
+							.name = preset_name,
+							.codec = u::tostring(codec),
+						}
+					);
 					break;
 				}
 			}

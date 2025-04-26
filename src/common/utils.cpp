@@ -532,6 +532,10 @@ std::vector<std::wstring> u::ffmpeg_string_to_args(const std::wstring& str) {
 }
 
 std::map<int, std::string> u::get_rife_gpus() {
+#ifdef __APPLE__ // todo: rife mac issue
+	return {};
+#endif
+
 	namespace bp = boost::process;
 
 	bp::environment env = boost::this_process::environment();
@@ -589,6 +593,10 @@ int u::get_fastest_rife_gpu_index(
 	const std::filesystem::path& rife_model_path,
 	const std::filesystem::path& benchmark_video_path
 ) {
+#ifdef __APPLE__ // todo: rife mac issue
+	return 0;
+#endif
+
 	namespace bp = boost::process;
 
 	std::map<int, float> benchmark_map;
