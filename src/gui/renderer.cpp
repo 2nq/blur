@@ -941,7 +941,7 @@ void gui::renderer::components::configs::preview(ui::Container& container, BlurS
 					FONT_CENTERED_X
 				);
 
-				ui::add_button("open preview file button", container, "Open file", fonts::dejavu, [] {
+				ui::add_button("open preview file button", container, "Or open file", fonts::dejavu, [] {
 					static auto file_callback = [](void* userdata, const char* const* files, int filter) {
 						if (files != nullptr && *files != nullptr) {
 							const char* file = *files;
