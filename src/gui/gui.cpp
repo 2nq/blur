@@ -1,4 +1,5 @@
 #include "gui.h"
+#include "gui/tasks.h"
 #include "renderer.h"
 #include "sdl.h"
 #include "ui/keys.h"
@@ -35,6 +36,28 @@ int gui::run() {
 
 					case SDL_EVENT_WINDOW_EXPOSED:
 						to_render = true;
+						break;
+
+					case SDL_EVENT_DROP_FILE: {
+						std::string filename = event.drop.data;
+						std::vector<std::wstring> paths = { u::towstring(filename) };
+
+						if (gui::renderer::screen == gui::renderer::Screens::CONFIG) {
+							auto sample_video_path = blur.settings_path / "sample_video.mp4";
+							bool sample_video_exists = std::filesystem::exists(sample_video_path);
+							if (!sample_video_exists) {
+								tasks::add_sample_video(paths[0]);
+
+								break;
+							}
+						}
+
+						tasks::add_files(paths);
+
+						break;
+					}
+
+					default:
 						break;
 				}
 
