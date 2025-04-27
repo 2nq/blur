@@ -3,6 +3,8 @@
 #include "../render/render.h"
 
 namespace ui {
+	inline size_t frame = 0;
+
 	struct Padding {
 		int top = 0;
 		int right = 0;
@@ -69,6 +71,47 @@ namespace ui {
 			return style == other.style;
 		}
 	};
+
+	namespace texture_cache {
+		struct TextureWrapper {
+			size_t last_access_frame;
+			std::shared_ptr<render::Texture> texture;
+		};
+
+		inline std::unordered_map<std::string, TextureWrapper> map;
+
+		inline std::shared_ptr<render::Texture> get_or_load_texture(
+			const std::filesystem::path& path, const std::string& id
+		) {
+			// Use a combined key of path and id for caching
+			std::string cache_key = path.string() + "_" + id;
+
+			auto it = map.find(cache_key);
+			if (it != map.end()) {
+				auto& item = it->second;
+				item.last_access_frame = frame;
+				return item.texture;
+			}
+
+			// Load new texture
+			auto texture = std::make_shared<render::Texture>();
+			if (texture->load_from_file(path.string())) {
+				map[cache_key] = {
+					.last_access_frame = frame,
+					.texture = texture,
+				};
+				return texture;
+			}
+
+			return nullptr;
+		}
+
+		inline void remove_old() {
+			std::erase_if(texture_cache::map, [](const auto& pair) {
+				return pair.second.last_access_frame != frame;
+			});
+		}
+	}
 
 	struct ImageElementData {
 		std::filesystem::path image_path;
@@ -483,4 +526,5 @@ namespace ui {
 	void render_container(Container& container);
 
 	void on_frame_start();
+	void on_frame_end();
 }

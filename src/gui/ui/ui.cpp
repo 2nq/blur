@@ -425,4 +425,10 @@ void ui::render_container(Container& container) {
 	// render::pop_clip_rect();
 }
 
-void ui::on_frame_start() {}
+void ui::on_frame_start() {
+	frame++;
+}
+
+void ui::on_frame_end() {
+	texture_cache::remove_old();
+}

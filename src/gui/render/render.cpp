@@ -116,8 +116,6 @@ bool render::init(SDL_Window* window, const SDL_GLContext& context) {
 }
 
 void render::destroy() {
-	// Cleanup
-	// [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppQuit() function]
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
@@ -486,7 +484,6 @@ void render::text(
 	ImGui::PopFont();
 }
 
-// Implementation of the Texture class
 render::Texture::~Texture() {
 	destroy();
 }

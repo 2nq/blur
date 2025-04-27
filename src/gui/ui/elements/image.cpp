@@ -3,31 +3,6 @@
 
 static const float IMAGE_ROUNDING = 5.f;
 
-// Cache for textures to avoid reloading
-namespace {
-	std::unordered_map<std::string, std::shared_ptr<render::Texture>> texture_cache;
-
-	std::shared_ptr<render::Texture> get_or_load_texture(const std::filesystem::path& path, const std::string& id) {
-		// Use a combined key of path and id for caching
-		std::string cache_key = path.string() + "_" + id;
-
-		auto it = texture_cache.find(cache_key);
-		if (it != texture_cache.end()) {
-			return it->second;
-		}
-
-		// Load new texture
-		auto texture = std::make_shared<render::Texture>();
-		if (texture->load_from_file(path.string())) {
-			texture_cache[cache_key] = texture;
-			return texture;
-		}
-
-		return nullptr;
-	}
-}
-
-// Updated ImageElementData to use our texture system
 struct ImageElementData {
 	std::filesystem::path image_path;
 	std::shared_ptr<render::Texture> texture;
@@ -88,7 +63,7 @@ std::optional<ui::Element*> ui::add_image(
 
 	// Load image if new
 	if (!texture) {
-		texture = get_or_load_texture(image_path, image_id);
+		texture = texture_cache::get_or_load_texture(image_path, image_id);
 
 		if (!texture) {
 			u::log("{} failed to load image (id: {})", id, image_id);

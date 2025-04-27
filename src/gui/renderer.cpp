@@ -1581,7 +1581,7 @@ bool gui::renderer::redraw_window(bool force_render) {
 	}
 	render::imgui.end(sdl::window);
 
-	// TODO PORT: free images that weren't rendered this frame
+	ui::on_frame_end();
 
 	return want_to_render;
 }
