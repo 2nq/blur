@@ -89,20 +89,46 @@ bool render::init(SDL_Window* window, const SDL_GLContext& context) {
 	if (!imgui.init(window, context))
 		return false;
 
+	// Get the window display scale to adjust font sizes and styling
+	dpi_scale = SDL_GetWindowDisplayScale(window);
+
+	// Setup ImGui style scaling (only needed for ImGui widgets)
+	ImGui::StyleColorsDark();
+	ImGui::GetStyle().ScaleAllSizes(dpi_scale);
+
+	// The rest of your init code...
 	const auto* glyph_ranges = imgui.io->Fonts->GetGlyphRangesDefault();
 
 	ImFontConfig font_cfg;
-	font_cfg.RasterizerDensity = SDL_GetWindowPixelDensity(window); // TODO PORT: update when changing screen
+	// Use the window's pixel density directly
+	font_cfg.RasterizerDensity = SDL_GetWindowPixelDensity(window);
 
-	// init fonts
-	if (!fonts::dejavu.init(DejaVuSans_compressed_data, DejaVuSans_compressed_size, 13.f, &font_cfg, glyph_ranges))
+	// Init fonts with the correct scaling - maintain your original sizes here
+	float base_font_size = 13.0f;
+	float header_font_size = 30.0f;
+	float smaller_header_font_size = 18.0f;
+
+	// Fonts still need DPI scaling as they're rendered at a fixed size
+	if (!fonts::dejavu.init(
+			DejaVuSans_compressed_data, DejaVuSans_compressed_size, base_font_size * dpi_scale, &font_cfg, glyph_ranges
+		))
 		return false;
 
-	if (!fonts::header_font.init(EbGaramond_compressed_data, EbGaramond_compressed_size, 30.f, &font_cfg, glyph_ranges))
+	if (!fonts::header_font.init(
+			EbGaramond_compressed_data,
+			EbGaramond_compressed_size,
+			header_font_size * dpi_scale,
+			&font_cfg,
+			glyph_ranges
+		))
 		return false;
 
 	if (!fonts::smaller_header_font.init(
-			EbGaramond_compressed_data, EbGaramond_compressed_size, 18.f, &font_cfg, glyph_ranges
+			EbGaramond_compressed_data,
+			EbGaramond_compressed_size,
+			smaller_header_font_size * dpi_scale,
+			&font_cfg,
+			glyph_ranges
 		))
 		return false;
 
@@ -161,27 +187,43 @@ void render::ImGuiWrap::end(SDL_Window* window) {
 void render::line(
 	const gfx::Point& pos1, const gfx::Point& pos2, const gfx::Color& col, bool anti_aliased, float thickness
 ) {
-	imgui.drawlist->AddLine(pos1, pos2, col.to_imgui(), thickness);
+	// Scale points and thickness
+	gfx::Point p1 = scale_point(pos1);
+	gfx::Point p2 = scale_point(pos2);
+	imgui.drawlist->AddLine(p1, p2, col.to_imgui(), thickness * dpi_scale);
 }
 
 void render::rect_filled(const gfx::Rect& rect, const gfx::Color& col) {
-	imgui.drawlist->AddRectFilled(rect.origin(), rect.max(), col.to_imgui());
+	gfx::Rect scaled_rect = scale_rect(rect);
+	imgui.drawlist->AddRectFilled(scaled_rect.origin(), scaled_rect.max(), col.to_imgui());
 }
 
 void render::rect_stroke(const gfx::Rect& rect, const gfx::Color& col, float thickness) {
-	imgui.drawlist->AddRect(rect.origin(), rect.max(), col.to_imgui(), 0.f, 0, thickness);
+	gfx::Rect scaled_rect = scale_rect(rect);
+	imgui.drawlist->AddRect(scaled_rect.origin(), scaled_rect.max(), col.to_imgui(), 0.f, 0, thickness * dpi_scale);
 }
 
 void render::rounded_rect_filled(
 	const gfx::Rect& rect, const gfx::Color& col, float rounding, unsigned int rounding_flags
 ) {
-	imgui.drawlist->AddRectFilled(rect.origin(), rect.max(), col.to_imgui(), rounding, rounding_flags);
+	gfx::Rect scaled_rect = scale_rect(rect);
+	imgui.drawlist->AddRectFilled(
+		scaled_rect.origin(), scaled_rect.max(), col.to_imgui(), rounding * dpi_scale, rounding_flags
+	);
 }
 
 void render::rounded_rect_stroke(
 	const gfx::Rect& rect, const gfx::Color& col, float rounding, unsigned int rounding_flags, float thickness
 ) {
-	imgui.drawlist->AddRect(rect.origin(), rect.max(), col.to_imgui(), rounding, rounding_flags, thickness);
+	gfx::Rect scaled_rect = scale_rect(rect);
+	imgui.drawlist->AddRect(
+		scaled_rect.origin(),
+		scaled_rect.max(),
+		col.to_imgui(),
+		rounding * dpi_scale,
+		rounding_flags,
+		thickness * dpi_scale
+	);
 }
 
 void render::rect_filled_gradient(
@@ -195,14 +237,17 @@ void render::rect_filled_gradient(
 		return; // Invalid input parameters
 	}
 
+	// Scale the rectangle and direction points
+	gfx::Rect scaled_rect = scale_rect(rect);
+	std::vector<gfx::Point> scaled_direction = { scale_point(gradient_direction[0]),
+		                                         scale_point(gradient_direction[1]) };
+
 	// For custom gradient direction, we need to split the rectangle into multiple triangles
-	ImVec2 origin = rect.origin();
-	ImVec2 max = rect.max();
+	ImVec2 origin = scaled_rect.origin();
+	ImVec2 max = scaled_rect.max();
 
 	// Calculate direction vector
-	ImVec2 dir_vec(
-		gradient_direction[1].x - gradient_direction[0].x, gradient_direction[1].y - gradient_direction[0].y
-	);
+	ImVec2 dir_vec(scaled_direction[1].x - scaled_direction[0].x, scaled_direction[1].y - scaled_direction[0].y);
 	float dir_length = sqrtf(dir_vec.x * dir_vec.x + dir_vec.y * dir_vec.y);
 
 	if (dir_length < 0.0001f) {
@@ -262,8 +307,9 @@ void render::rect_filled_gradient(
 		return; // Invalid input parameters
 	}
 
-	ImVec2 origin = rect.origin();
-	ImVec2 max = rect.max();
+	gfx::Rect scaled_rect = scale_rect(rect);
+	ImVec2 origin = scaled_rect.origin();
+	ImVec2 max = scaled_rect.max();
 
 	// For predefined directions, we can use the ImGui built-in functions
 	if (colors.size() == 2) {
@@ -302,30 +348,39 @@ void render::rect_filled_gradient(
 		// Convert direction to points for the general implementation
 		std::vector<gfx::Point> gradient_direction;
 
+		// These are in logical coordinates, will be scaled in rect_filled_gradient
 		switch (direction) {
 			case GradientDirection::GRADIENT_RIGHT:
-				gradient_direction = { gfx::Point(origin.x, origin.y), gfx::Point(max.x, origin.y) };
+				gradient_direction = { gfx::Point(rect.origin().x, rect.origin().y),
+					                   gfx::Point(rect.max().x, rect.origin().y) };
 				break;
 			case GradientDirection::GRADIENT_LEFT:
-				gradient_direction = { gfx::Point(max.x, origin.y), gfx::Point(origin.x, origin.y) };
+				gradient_direction = { gfx::Point(rect.max().x, rect.origin().y),
+					                   gfx::Point(rect.origin().x, rect.origin().y) };
 				break;
 			case GradientDirection::GRADIENT_DOWN:
-				gradient_direction = { gfx::Point(origin.x, origin.y), gfx::Point(origin.x, max.y) };
+				gradient_direction = { gfx::Point(rect.origin().x, rect.origin().y),
+					                   gfx::Point(rect.origin().x, rect.max().y) };
 				break;
 			case GradientDirection::GRADIENT_UP:
-				gradient_direction = { gfx::Point(origin.x, max.y), gfx::Point(origin.x, origin.y) };
+				gradient_direction = { gfx::Point(rect.origin().x, rect.max().y),
+					                   gfx::Point(rect.origin().x, rect.origin().y) };
 				break;
 			case GradientDirection::GRADIENT_DOWN_RIGHT:
-				gradient_direction = { gfx::Point(origin.x, origin.y), gfx::Point(max.x, max.y) };
+				gradient_direction = { gfx::Point(rect.origin().x, rect.origin().y),
+					                   gfx::Point(rect.max().x, rect.max().y) };
 				break;
 			case GradientDirection::GRADIENT_UP_LEFT:
-				gradient_direction = { gfx::Point(max.x, max.y), gfx::Point(origin.x, origin.y) };
+				gradient_direction = { gfx::Point(rect.max().x, rect.max().y),
+					                   gfx::Point(rect.origin().x, rect.origin().y) };
 				break;
 			case GradientDirection::GRADIENT_DOWN_LEFT:
-				gradient_direction = { gfx::Point(max.x, origin.y), gfx::Point(origin.x, max.y) };
+				gradient_direction = { gfx::Point(rect.max().x, rect.origin().y),
+					                   gfx::Point(rect.origin().x, rect.max().y) };
 				break;
 			case GradientDirection::GRADIENT_UP_RIGHT:
-				gradient_direction = { gfx::Point(origin.x, max.y), gfx::Point(max.x, origin.y) };
+				gradient_direction = { gfx::Point(rect.origin().x, rect.max().y),
+					                   gfx::Point(rect.max().x, rect.origin().y) };
 				break;
 		}
 
@@ -341,11 +396,16 @@ void render::rect_gradient_multi_filled(
 	const gfx::Color& col_bottom_left,
 	const gfx::Color& col_bottom_right
 ) {
-	render::rect_stroke(rect, col_top_left);
+	gfx::Rect scaled_rect = scale_rect(rect);
+
+	// Stroke is just for debugging, keeping it here
+	imgui.drawlist->AddRect(
+		scaled_rect.top_left(), scaled_rect.bottom_right(), col_top_left.to_imgui(), 0.0f, 0, dpi_scale
+	);
 
 	imgui.drawlist->AddRectFilledMultiColor(
-		rect.top_left(),
-		rect.bottom_right(),
+		scaled_rect.top_left(),
+		scaled_rect.bottom_right(),
 		col_top_left.to_imgui(),
 		col_top_right.to_imgui(),
 		col_bottom_right.to_imgui(),
@@ -360,7 +420,11 @@ void render::quadrilateral_filled(
 	const gfx::Point& top_right,
 	const gfx::Color& col
 ) {
-	ImVec2 positions[5] = { top_left, bottom_left, bottom_right, top_right, top_left };
+	ImVec2 positions[5] = { scale_point(top_left),
+		                    scale_point(bottom_left),
+		                    scale_point(bottom_right),
+		                    scale_point(top_right),
+		                    scale_point(top_left) };
 
 	imgui.drawlist->AddConvexPolyFilled(positions, 5, col.to_imgui());
 }
@@ -373,9 +437,13 @@ void render::quadrilateral_stroke(
 	const gfx::Color& col,
 	float thickness
 ) {
-	ImVec2 positions[5] = { top_left, bottom_left, bottom_right, top_right, top_left };
+	ImVec2 positions[5] = { scale_point(top_left),
+		                    scale_point(bottom_left),
+		                    scale_point(bottom_right),
+		                    scale_point(top_right),
+		                    scale_point(top_left) };
 
-	imgui.drawlist->AddPolyline(positions, 5, col.to_imgui(), ImDrawFlags_Closed, thickness);
+	imgui.drawlist->AddPolyline(positions, 5, col.to_imgui(), ImDrawFlags_Closed, thickness * dpi_scale);
 }
 
 void render::triangle_filled(
@@ -386,7 +454,7 @@ void render::triangle_filled(
 	float thickness,
 	bool anti_aliased
 ) {
-	imgui.drawlist->AddTriangleFilled(p1, p2, p3, col.to_imgui());
+	imgui.drawlist->AddTriangleFilled(scale_point(p1), scale_point(p2), scale_point(p3), col.to_imgui());
 }
 
 void render::triangle_stroke(
@@ -397,7 +465,9 @@ void render::triangle_stroke(
 	float thickness,
 	bool anti_aliased
 ) {
-	imgui.drawlist->AddTriangle(p1, p2, p3, col.to_imgui(), thickness);
+	imgui.drawlist->AddTriangle(
+		scale_point(p1), scale_point(p2), scale_point(p3), col.to_imgui(), thickness * dpi_scale
+	);
 }
 
 void render::circle_filled(
@@ -410,7 +480,10 @@ void render::circle_filled(
 	float start_degree,
 	bool antialiased
 ) {
-	imgui.drawlist->AddCircleFilled(pos, radius, colour.to_imgui(), parts);
+	gfx::Point scaled_pos = scale_point(pos);
+	float scaled_radius = radius * dpi_scale;
+
+	imgui.drawlist->AddCircleFilled(scaled_pos, scaled_radius, colour.to_imgui(), parts);
 }
 
 void render::circle_stroke(
@@ -423,15 +496,18 @@ void render::circle_stroke(
 	float start_degree,
 	bool antialiased
 ) {
+	gfx::Point scaled_pos = scale_point(pos);
+	float scaled_radius = radius * dpi_scale;
+
 	if (!(degrees == 360.f && start_degree == 0.f)) {
 		auto min_rad = deg_to_rad(start_degree);
 		auto max_rad = deg_to_rad(degrees);
-		imgui.drawlist->PathArcTo(pos, radius, min_rad, max_rad, parts);
-		imgui.drawlist->PathStroke(colour.to_imgui(), 0, thickness);
+		imgui.drawlist->PathArcTo(scaled_pos, scaled_radius, min_rad, max_rad, parts);
+		imgui.drawlist->PathStroke(colour.to_imgui(), 0, thickness * dpi_scale);
 		return;
 	}
 
-	imgui.drawlist->AddCircle(pos, radius, colour.to_imgui(), parts, thickness);
+	imgui.drawlist->AddCircle(scaled_pos, scaled_radius, colour.to_imgui(), parts, thickness * dpi_scale);
 }
 
 void render::text(
@@ -443,37 +519,44 @@ void render::text(
 	const auto* text_char = text.data();
 	bool outline = false;
 
+	// Scale position
+	gfx::Point scaled_pos = scale_point(pos);
+
 	ImGui::PushFont(font.im_font());
 
 	if (flags) {
 		const auto size = font.calc_size(text);
 
 		if (flags & FONT_CENTERED_X)
-			pos.x -= int(size.w * 0.5f);
+			scaled_pos.x -= int(size.w * 0.5f * dpi_scale);
 
 		if (flags & FONT_CENTERED_Y)
-			pos.y -= int(size.h * 0.5f);
+			scaled_pos.y -= int(size.h * 0.5f * dpi_scale);
 
 		if (flags & FONT_RIGHT_ALIGN)
-			pos.x -= size.w;
+			scaled_pos.x -= size.w * dpi_scale;
 
 		if (flags & FONT_BOTTOM_ALIGN)
-			pos.y -= size.h;
+			scaled_pos.y -= size.h * dpi_scale;
 
 		if (flags & FONT_OUTLINE)
 			outline = true;
 
 		if (flags & FONT_DROPSHADOW) {
 			const gfx::Color dropshadow_colour(0, 0, 0, colour.a * 0.6f);
-			const int shift_amount = outline ? 2 : 1;
+			const float shift_amount = (outline ? 2 : 1) * dpi_scale;
 
 			imgui.drawlist->AddText(
-				font.im_font(), font.size(), pos.offset(shift_amount), dropshadow_colour.to_imgui(), text.data()
+				font.im_font(),
+				font.size(),
+				scaled_pos.offset(shift_amount, shift_amount),
+				dropshadow_colour.to_imgui(),
+				text.data()
 			);
 		}
 	}
 
-	imgui.drawlist->AddText(font.im_font(), font.size(), pos, colour.to_imgui(), text.data());
+	imgui.drawlist->AddText(font.im_font(), font.size(), scaled_pos, colour.to_imgui(), text.data());
 
 	ImGui::PopFont();
 }
@@ -557,8 +640,10 @@ void render::image(const gfx::Rect& rect, const Texture& texture, const gfx::Col
 	if (!texture.is_valid())
 		return;
 
+	gfx::Rect scaled_rect = scale_rect(rect);
+
 	imgui.drawlist->AddImage(
-		texture.get_id(), rect.origin(), rect.max(), ImVec2(0, 0), ImVec2(1, 1), tint_color.to_imgui()
+		texture.get_id(), scaled_rect.origin(), scaled_rect.max(), ImVec2(0, 0), ImVec2(1, 1), tint_color.to_imgui()
 	);
 }
 
@@ -572,14 +657,16 @@ void render::image_rounded(
 	if (!texture.is_valid())
 		return;
 
+	gfx::Rect scaled_rect = scale_rect(rect);
+
 	imgui.drawlist->AddImageRounded(
 		texture.get_id(),
-		rect.origin(),
-		rect.max(),
+		scaled_rect.origin(),
+		scaled_rect.max(),
 		ImVec2(0, 0),
 		ImVec2(1, 1),
 		tint_color.to_imgui(),
-		rounding,
+		rounding * dpi_scale,
 		rounding_flags
 	);
 }
@@ -596,21 +683,22 @@ void render::image_with_borders(
 	if (!texture.is_valid())
 		return;
 
-	image_rounded(rect.shrink(1), texture, rounding, rounding_flags, tint_color);
+	gfx::Rect inner_rect = rect.shrink(1);
+	gfx::Rect scaled_inner_rect = scale_rect(inner_rect);
+	gfx::Rect scaled_rect = scale_rect(rect);
+
+	image_rounded(inner_rect, texture, rounding, rounding_flags, tint_color);
 
 	rounded_rect_stroke(rect, border_color, rounding, rounding_flags, border_thickness);
 }
 
 void render::push_clip_rect(const gfx::Rect& rect, bool intersect_clip_rect) {
-	imgui.drawlist->PushClipRect(rect.origin(), rect.max(), intersect_clip_rect);
-}
-
-void render::push_clip_rect(int x1, int y1, int x2, int y2, bool intersect_clip_rect) {
-	push_clip_rect(gfx::Rect(gfx::Point(x1, y1), gfx::Point(x2, y2)), intersect_clip_rect);
+	gfx::Rect scaled_rect = scale_rect(rect);
+	imgui.drawlist->PushClipRect(scaled_rect.origin(), scaled_rect.max(), intersect_clip_rect);
 }
 
 void render::push_fullscreen_clip_rect() {
-	push_clip_rect(0, 0, window_size.w, window_size.h, false);
+	push_clip_rect(gfx::Rect(gfx::Point(0, 0), window_size), false);
 }
 
 gfx::Rect render::pop_clip_rect() {
@@ -618,21 +706,26 @@ gfx::Rect render::pop_clip_rect() {
 	ImVec2 min = imgui.drawlist->GetClipRectMin();
 	ImVec2 max = imgui.drawlist->GetClipRectMax();
 	imgui.drawlist->PopClipRect();
-	return gfx::Rect(gfx::Point(min.x, min.y), gfx::Point(max.x, max.y));
+
+	// Return unscaled rect
+	return gfx::Rect(unscale_point(gfx::Point(min.x, min.y)), unscale_point(gfx::Point(max.x, max.y)));
 }
 
 gfx::Rect render::get_clip_rect() {
 	ImVec2 min = imgui.drawlist->GetClipRectMin();
 	ImVec2 max = imgui.drawlist->GetClipRectMax();
-	return gfx::Rect(gfx::Point(min.x, min.y), gfx::Point(max.x, max.y));
+
+	// Return unscaled rect
+	return gfx::Rect(unscale_point(gfx::Point(min.x, min.y)), unscale_point(gfx::Point(max.x, max.y)));
 }
 
 bool render::clip_string(std::string& text, const Font& font, int max_width, int min_chars) {
-	int size = font.calc_size(text).w;
-	if (size <= max_width)
-		return true;
+	// Convert max_width to scaled width for font calculations
+	int scaled_max_width = max_width * dpi_scale;
 
-	// bool start_right = size < max_width * 2;
+	int size = font.calc_size(text).w;
+	if (size <= scaled_max_width)
+		return true;
 
 	int dots_size = font.calc_size("...").w;
 
@@ -640,7 +733,7 @@ bool render::clip_string(std::string& text, const Font& font, int max_width, int
 	for (int i = 0; i < num; i++) {
 		text.pop_back();
 
-		if (font.calc_size(text).w + dots_size <= max_width) {
+		if (font.calc_size(text).w + dots_size <= scaled_max_width) {
 			text += "...";
 			return true;
 		}
@@ -657,13 +750,16 @@ std::vector<std::string> render::wrap_text(
 	if (!font)
 		return lines;
 
+	// Scale dimensions for font calculations
+	gfx::Size scaled_dimensions = scale_size(dimensions);
+
 	std::istringstream iss(text);
 	std::string word;
 	std::string current_line;
 
 	while (iss >> word) {
 		std::string test_line = current_line.empty() ? word : current_line + " " + word;
-		if (font.calc_size(test_line).w > dimensions.w) {
+		if (font.calc_size(test_line).w > scaled_dimensions.w) {
 			if (!current_line.empty()) {
 				lines.push_back(current_line);
 				current_line = word;
@@ -673,7 +769,7 @@ std::vector<std::string> render::wrap_text(
 				std::string sub_word;
 				for (char c : word) {
 					sub_word += c;
-					if (font.calc_size(sub_word).w > dimensions.w) {
+					if (font.calc_size(sub_word).w > scaled_dimensions.w) {
 						if (sub_word.length() > 1) {
 							lines.push_back(sub_word.substr(0, sub_word.length() - 1));
 							sub_word = sub_word.back();
@@ -694,3 +790,28 @@ std::vector<std::string> render::wrap_text(
 
 	return lines;
 }
+
+// // Handle DPI changes during runtime
+// void render::handle_dpi_changed(SDL_Window* window) {
+// 	float old_scale = dpi_scale;
+// 	float new_scale = SDL_GetWindowDisplayScale(window);
+
+// 	if (fabs(old_scale - new_scale) < 0.001f) {
+// 		return; // No significant change
+// 	}
+
+// 	// Update the scale factor
+// 	set_dpi_scale(new_scale);
+
+// 	// You may need to rebuild fonts if the scale change is significant
+// 	const float scale_ratio = new_scale / old_scale;
+
+// 	// Update ImGui style
+// 	ImGui::GetStyle().ScaleAllSizes(scale_ratio);
+
+// 	// If the scale change is significant, you might want to rebuild fonts
+// 	if (fabs(scale_ratio - 1.0f) > 0.1f) {
+// 		// You would need to implement a font rebuild mechanism here
+// 		// This might involve clearing the font atlas and rebuilding with new sizes
+// 	}
+// }

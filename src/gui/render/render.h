@@ -42,6 +42,24 @@ namespace render {
 	inline float frametime;
 	inline gfx::Size window_size;
 
+	inline float dpi_scale = 1.0f;
+
+	inline gfx::Point scale_point(const gfx::Point& p) {
+		return gfx::Point(p.x * dpi_scale, p.y * dpi_scale);
+	}
+
+	inline gfx::Size scale_size(const gfx::Size& s) {
+		return gfx::Size(s.w * dpi_scale, s.h * dpi_scale);
+	}
+
+	inline gfx::Rect scale_rect(const gfx::Rect& r) {
+		return gfx::Rect(scale_point(r.top_left()), gfx::Size(r.w * dpi_scale, r.h * dpi_scale));
+	}
+
+	inline gfx::Point unscale_point(const gfx::Point& p) {
+		return gfx::Point(p.x / dpi_scale, p.y / dpi_scale);
+	}
+
 	// Texture wrapper class for OpenGL textures
 	class Texture {
 	public:
@@ -235,7 +253,6 @@ namespace render {
 	);
 
 	void push_clip_rect(const gfx::Rect& rect, bool intersect_clip_rect = false);
-	void push_clip_rect(int x1, int y1, int x2, int y2, bool intersect_clip_rect = false);
 	void push_fullscreen_clip_rect();
 	gfx::Rect pop_clip_rect();
 	gfx::Rect get_clip_rect();
