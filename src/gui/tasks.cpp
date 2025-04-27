@@ -34,6 +34,7 @@ void tasks::run(const std::vector<std::string>& arguments) {
 		// idk what you're supposed to do to trigger a redraw in a separate thread!!! I dont do gui!!! this works
 		// tho :  ) todo: revisit this
 		// TODO PORT:
+		// ^ actually might not be needed since progress will update anyway
 	});
 
 	rendering.set_render_finished_callback([](Render* render, const RenderResult& result) {
