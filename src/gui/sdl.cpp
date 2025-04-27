@@ -54,7 +54,9 @@ void sdl::initialise() {
 		throw std::runtime_error("Failed to create SDL window");
 	}
 
-	SDL_AddEventWatch(resizing_event_watcher, window);
+	SDL_SetWindowMinimumSize(window, 450, 0);
+
+	SDL_AddEventWatch(event_watcher, window);
 
 	// enable drag and drop
 	SDL_SetEventEnabled(SDL_EVENT_DROP_FILE, true);
@@ -92,7 +94,7 @@ void sdl::cleanup() {
 	}
 
 	if (sdl::window) {
-		SDL_RemoveEventWatch(resizing_event_watcher, window);
+		SDL_RemoveEventWatch(event_watcher, window);
 
 		SDL_DestroyWindow(sdl::window);
 		sdl::window = nullptr;
@@ -101,12 +103,21 @@ void sdl::cleanup() {
 	SDL_Quit();
 }
 
-bool sdl::resizing_event_watcher(void* data, SDL_Event* event) {
-	if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-		SDL_Window* win = SDL_GetWindowFromID(event->window.windowID);
-		if (win == (SDL_Window*)data) {
-			gui::renderer::redraw_window(true); // TODO: squishy jelly
+bool sdl::event_watcher(void* data, SDL_Event* event) {
+	switch (event->type) {
+		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+			SDL_Window* win = SDL_GetWindowFromID(event->window.windowID);
+			if (win == (SDL_Window*)data) {
+				// gui::renderer::redraw_window(true); // TODO: squishy jelly
+
+				render::imgui.begin(sdl::window);
+				render::imgui.end(sdl::window);
+			}
+			break;
 		}
+
+		default:
+			break;
 	}
 
 	return true;

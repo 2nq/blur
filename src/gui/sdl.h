@@ -12,7 +12,7 @@ namespace sdl {
 	void initialise();
 	void cleanup();
 
-	bool resizing_event_watcher(void* data, SDL_Event* event);
+	bool event_watcher(void* data, SDL_Event* event);
 
 	void on_frame_start();
 	void set_cursor(SDL_SystemCursor cursor);
