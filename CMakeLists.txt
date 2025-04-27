@@ -62,23 +62,8 @@ function(setup_target target)
   if(WIN32)
     set(${target} resources/resources_win32.rc)
   endif()
-
   if(APPLE)
     target_link_libraries(${target} PRIVATE "-framework CoreFoundation")
-
-    # use bundled libunwind (fixes cli11 exception issue doesn't happen in
-    # github runners. idk. maybe it's my pc remove this and do ./blur-cli -h and
-    # you get libc++abi: terminating due to uncaught exception of type
-    # CLI::CallForHelp: This should be caught in your main function, see
-    # examples) taken from https://formulae.brew.sh/formula/llvm todo: remove
-    # when this is fixed or find a better solution. maybe this is just my macos
-    # version??
-    if(DEFINED ENV{HOMEBREW_PREFIX})
-      set(LLVM_UNWIND_PATH "$ENV{HOMEBREW_PREFIX}/opt/llvm/lib/unwind")
-      if(EXISTS ${LLVM_UNWIND_PATH})
-        target_link_libraries(${target} PRIVATE -L${LLVM_UNWIND_PATH} -lunwind)
-      endif()
-    endif()
 
     get_target_property(is_bundle ${target} MACOSX_BUNDLE)
 
