@@ -38,6 +38,17 @@ int gui::run() {
 						to_render = true;
 						break;
 
+					case SDL_EVENT_DROP_BEGIN:
+						dragging = true;
+						break;
+
+					case SDL_EVENT_DROP_COMPLETE:
+						dragging = false;
+						break;
+
+						// case SDL_EVENT_DROP_POSITION:
+						// 	break;
+
 					case SDL_EVENT_DROP_FILE: {
 						std::string filename = event.drop.data;
 						std::vector<std::wstring> paths = { u::towstring(filename) };

@@ -1398,7 +1398,7 @@ bool gui::renderer::redraw_window(bool force_render) {
 
 	static float bg_overlay_shade = 0.f;
 	float last_fill_shade = bg_overlay_shade;
-	// bg_overlay_shade = u::lerp(bg_overlay_shade, drag_handler::dragging ? 30.f : 0.f, 25.f * delta_time); TODO PORT:
+	bg_overlay_shade = u::lerp(bg_overlay_shade, gui::dragging ? 30.f : 0.f, 25.f * delta_time);
 	force_render |= bg_overlay_shade != last_fill_shade;
 
 	gfx::Rect nav_container_rect = rect;

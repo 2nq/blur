@@ -6,6 +6,8 @@ namespace gui {
 	inline bool stop = false;
 	inline bool to_render = true;
 
+	inline bool dragging = false;
+
 	void event_loop();
 	int run();
 }
