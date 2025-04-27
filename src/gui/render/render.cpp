@@ -91,24 +91,18 @@ bool render::init(SDL_Window* window, const SDL_GLContext& context) {
 
 	const auto* glyph_ranges = imgui.io->Fonts->GetGlyphRangesDefault();
 
-	ImFontConfig small_font_cfg;
-	small_font_cfg.OversampleH = 2;
-	small_font_cfg.OversampleV = 2;
-	small_font_cfg.PixelSnapH = false;
-	small_font_cfg.RasterizerMultiply = 1.3f;
-	small_font_cfg.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_LightHinting | ImGuiFreeTypeBuilderFlags_ForceAutoHint;
+	ImFontConfig font_cfg;
+	font_cfg.RasterizerDensity = SDL_GetWindowPixelDensity(window); // TODO PORT: update when changing screen
 
 	// init fonts
-	if (!fonts::dejavu.init(
-			DejaVuSans_compressed_data, DejaVuSans_compressed_size, 13.f, &small_font_cfg, glyph_ranges
-		))
+	if (!fonts::dejavu.init(DejaVuSans_compressed_data, DejaVuSans_compressed_size, 13.f, &font_cfg, glyph_ranges))
 		return false;
 
-	if (!fonts::header_font.init(EbGaramond_compressed_data, EbGaramond_compressed_size, 30.f, nullptr, glyph_ranges))
+	if (!fonts::header_font.init(EbGaramond_compressed_data, EbGaramond_compressed_size, 30.f, &font_cfg, glyph_ranges))
 		return false;
 
 	if (!fonts::smaller_header_font.init(
-			EbGaramond_compressed_data, EbGaramond_compressed_size, 18.f, nullptr, glyph_ranges
+			EbGaramond_compressed_data, EbGaramond_compressed_size, 18.f, &font_cfg, glyph_ranges
 		))
 		return false;
 
