@@ -562,6 +562,24 @@ void render::image(const gfx::Rect& rect, const Texture& texture, const gfx::Col
 	);
 }
 
+void render::image_with_borders(
+	const gfx::Rect& rect,
+	const Texture& texture,
+	const gfx::Color& border_color,
+	const gfx::Color& inner_border_color,
+	float border_thickness,
+	const gfx::Color& tint_color
+) {
+	if (!texture.is_valid())
+		return;
+
+	image(rect.shrink(3), texture, tint_color);
+
+	rect_stroke(rect.shrink(2), border_color, border_thickness);
+	rect_stroke(rect.shrink(1), inner_border_color, border_thickness);
+	rect_stroke(rect, border_color, border_thickness);
+}
+
 void render::image_rounded(
 	const gfx::Rect& rect,
 	const Texture& texture,
@@ -584,11 +602,12 @@ void render::image_rounded(
 	);
 }
 
-void render::image_with_borders(
+void render::rounded_image_with_borders(
 	const gfx::Rect& rect,
 	const Texture& texture,
 	float rounding,
 	const gfx::Color& border_color,
+	const gfx::Color& inner_border_color,
 	float border_thickness,
 	unsigned int rounding_flags,
 	const gfx::Color& tint_color
@@ -596,8 +615,10 @@ void render::image_with_borders(
 	if (!texture.is_valid())
 		return;
 
-	image_rounded(rect.shrink(1), texture, rounding, rounding_flags, tint_color);
+	image_rounded(rect.shrink(3), texture, rounding, rounding_flags, tint_color);
 
+	rounded_rect_stroke(rect.shrink(2), border_color, rounding, rounding_flags, border_thickness);
+	rounded_rect_stroke(rect.shrink(1), inner_border_color, rounding, rounding_flags, border_thickness);
 	rounded_rect_stroke(rect, border_color, rounding, rounding_flags, border_thickness);
 }
 

@@ -1,8 +1,6 @@
 #include "../ui.h"
 #include "../../render/render.h"
 
-static const float IMAGE_ROUNDING = 5.f;
-
 struct ImageElementData {
 	std::filesystem::path image_path;
 	std::shared_ptr<render::Texture> texture;
@@ -17,20 +15,14 @@ void ui::render_image(const Container& container, const AnimatedElement& element
 	int alpha = anim * 255;
 	int stroke_alpha = anim * 125;
 
-	// Create tinted color with animation alpha
 	gfx::Color tint_color = image_data.image_color.adjust_alpha(anim);
 
-	// Base rectangle
-	gfx::Rect image_rect = element.element->rect;
-
-	// Draw the image with borders
 	render::image_with_borders(
-		image_rect,
+		element.element->rect,
 		*image_data.texture,
-		IMAGE_ROUNDING,
 		gfx::Color(155, 155, 155, stroke_alpha),
+		gfx::Color(80, 80, 80, stroke_alpha),
 		1.0f,
-		ROUNDING_ALL,
 		tint_color
 	);
 }

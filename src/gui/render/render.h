@@ -216,6 +216,15 @@ namespace render {
 	// New image functions
 	void image(const gfx::Rect& rect, const Texture& texture, const gfx::Color& tint_color = gfx::Color::white());
 
+	void image_with_borders(
+		const gfx::Rect& rect,
+		const Texture& texture,
+		const gfx::Color& border_color,
+		const gfx::Color& inner_border_color,
+		float border_thickness = 1.0f,
+		const gfx::Color& tint_color = gfx::Color::white()
+	);
+
 	void image_rounded(
 		const gfx::Rect& rect,
 		const Texture& texture,
@@ -224,11 +233,12 @@ namespace render {
 		const gfx::Color& tint_color = gfx::Color::white()
 	);
 
-	void image_with_borders(
+	void rounded_image_with_borders(
 		const gfx::Rect& rect,
 		const Texture& texture,
 		float rounding,
 		const gfx::Color& border_color,
+		const gfx::Color& inner_border_color,
 		float border_thickness = 1.0f,
 		unsigned int rounding_flags = ROUNDING_ALL,
 		const gfx::Color& tint_color = gfx::Color::white()
