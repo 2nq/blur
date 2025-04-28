@@ -118,7 +118,10 @@ void gui::renderer::components::main_screen(ui::Container& container, float delt
 		bar_percent = 0.f;
 
 		gfx::Point title_pos = container.get_usable_rect().center();
-		title_pos.y = int(PAD_Y + fonts::header_font.height());
+		if (container.rect.h > 275)
+			title_pos.y = int(PAD_Y + fonts::header_font.height());
+		else
+			title_pos.y = 10 + fonts::header_font.height();
 
 		ui::add_text_fixed(
 			"blur title text", container, title_pos, "blur", gfx::Color::white(), fonts::header_font, FONT_CENTERED_X
