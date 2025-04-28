@@ -54,7 +54,7 @@ void sdl::initialise() {
 		throw std::runtime_error("Failed to create SDL window");
 	}
 
-	SDL_SetWindowMinimumSize(window, 450, 0);
+	SDL_SetWindowMinimumSize(window, 450, 250);
 
 	SDL_AddEventWatch(event_watcher, window);
 
