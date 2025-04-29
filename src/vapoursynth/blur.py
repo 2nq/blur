@@ -26,6 +26,7 @@ import blur.deduplicate_rife
 import blur.interpolate
 import blur.weighting
 import blur.adjust
+import blur.mask
 import blur.utils as u
 
 video_path = Path(vars().get("video_path", ""))
@@ -58,6 +59,8 @@ else:
     video = core.lsmas.LWLibavSource(
         source=video_path, cache=0, prefer_hw=3 if settings["gpu_decoding"] else 0
     )
+
+og_video = video
 
 if settings["deduplicate"] and settings["deduplicate_range"] != 0:
     deduplicate_range: int | None = int(settings["deduplicate_range"])
@@ -322,5 +325,45 @@ if settings["filters"]:
             cont=settings["contrast"],
             sat=settings["saturation"],
         )
+        og_video = blur.adjust.Tweak(
+            og_video,
+            bright=settings["brightness"] - 1,
+            cont=settings["contrast"],
+            sat=settings["saturation"],
+        )
 
+if video.fps != og_video.fps:
+    og_video = blur.interpolate.change_fps(og_video, video.fps)
+
+# crosshair_mask = (
+#     # crosshair_mask.std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)
+#     # .std.Maximum()
+#     # .std.Maximum()
+#     # .std.Maximum()
+#     # .std.Expr(  # blur to expand region a bit
+#     #     expr="x 20 > 255 0 ?"
+#     # )  # make anything slightly white full white
+#     # .std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)  # blur expanded area
+# )
+
+black = core.std.BlankClip(
+    width=og_video.width,
+    height=og_video.height,
+    length=og_video.num_frames,
+    fpsnum=og_video.fps.numerator,
+    fpsden=og_video.fps.denominator,
+    format=vs.YUV420P8,
+)
+
+target_color = [191, 0, 164]
+tolerance = 155
+radius = 50
+
+crosshair_mask = blur.mask.ColorReplaceCentered(
+    og_video, black, radius, target_color, tolerance
+)
+
+video = core.std.MaskedMerge(
+    clipa=video, clipb=og_video, mask=crosshair_mask, first_plane=True
+)
 video.set_output()
