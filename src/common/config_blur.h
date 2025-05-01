@@ -44,6 +44,7 @@ struct BlurSettings {
 	float blur_amount = 1.f;
 	int blur_output_fps = 60;
 	std::string blur_weighting = "equal";
+	float blur_gamma = 1.f;
 
 	bool interpolate = true;
 	std::string interpolated_fps = "5x";
@@ -88,11 +89,11 @@ public:
 		// reflection would be nice c++ -_-
 		// todo: boost? i mean, im already using it partially
 		return blur == other.blur && blur_amount == other.blur_amount && blur_output_fps == other.blur_output_fps &&
-		       blur_weighting == other.blur_weighting && interpolate == other.interpolate &&
-		       interpolated_fps == other.interpolated_fps && interpolation_method == other.interpolation_method &&
-		       pre_interpolate == other.pre_interpolate && pre_interpolated_fps == other.pre_interpolated_fps &&
-		       timescale == other.timescale && input_timescale == other.input_timescale &&
-		       output_timescale == other.output_timescale &&
+		       blur_weighting == other.blur_weighting && blur_gamma == other.blur_gamma &&
+		       interpolate == other.interpolate && interpolated_fps == other.interpolated_fps &&
+		       interpolation_method == other.interpolation_method && pre_interpolate == other.pre_interpolate &&
+		       pre_interpolated_fps == other.pre_interpolated_fps && timescale == other.timescale &&
+		       input_timescale == other.input_timescale && output_timescale == other.output_timescale &&
 		       output_timescale_audio_pitch == other.output_timescale_audio_pitch && filters == other.filters &&
 		       brightness == other.brightness && saturation == other.saturation && contrast == other.contrast &&
 		       encode_preset == other.encode_preset && deduplicate == other.deduplicate &&

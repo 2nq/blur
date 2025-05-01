@@ -20,6 +20,8 @@ if vars().get("macos_bundled") == "true":
 # add blur.py folder to path so it can reference scripts
 sys.path.insert(1, str(Path(__file__).parent))
 
+import math
+
 import blur.blending
 import blur.deduplicate
 import blur.deduplicate_rife
@@ -304,7 +306,11 @@ if settings["blur"]:
 
             weights = do_weighting_fn(settings["blur_weighting"])
 
-            video = blur.blending.average(video, weights)
+            gamma = float(settings["blur_gamma"])
+            if gamma == 1.0:
+                video = blur.blending.average(video, weights)
+            else:
+                video = blur.blending.average_bright(video, gamma, weights)
 
     # set exact fps
     video = blur.interpolate.change_fps(video, settings["blur_output_fps"])

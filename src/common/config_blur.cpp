@@ -12,6 +12,7 @@ void config_blur::create(const std::filesystem::path& filepath, const BlurSettin
 	output << "blur amount: " << current_settings.blur_amount << "\n";
 	output << "blur output fps: " << current_settings.blur_output_fps << "\n";
 	output << "blur weighting: " << current_settings.blur_weighting << "\n";
+	output << "blur gamma: " << current_settings.blur_gamma << "\n";
 
 	output << "\n";
 	output << "- interpolation" << "\n";
@@ -154,6 +155,7 @@ BlurSettings config_blur::parse(const std::filesystem::path& config_filepath) {
 	config_base::extract_config_value(config_map, "blur amount", settings.blur_amount);
 	config_base::extract_config_value(config_map, "blur output fps", settings.blur_output_fps);
 	config_base::extract_config_string(config_map, "blur weighting", settings.blur_weighting);
+	config_base::extract_config_value(config_map, "blur gamma", settings.blur_gamma);
 
 	config_base::extract_config_value(config_map, "interpolate", settings.interpolate);
 	config_base::extract_config_string(config_map, "interpolated fps", settings.interpolated_fps);
@@ -294,6 +296,7 @@ BlurSettings::ToJsonResult BlurSettings::to_json() const {
 	j["blur_amount"] = this->blur_amount;
 	j["blur_output_fps"] = this->blur_output_fps;
 	j["blur_weighting"] = this->blur_weighting;
+	j["blur_gamma"] = this->blur_gamma;
 
 	j["interpolate"] = this->interpolate;
 	j["interpolated_fps"] = this->interpolated_fps;

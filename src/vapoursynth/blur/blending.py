@@ -81,3 +81,40 @@ def average(clip: vs.VideoNode, weights: list[float], divisor: float | None = No
     expr += f"{divisor} /" if divisor != 1 else ""
 
     return core.akarin.Expr(clips, expr)
+
+
+def average_bright(
+    video: vs.VideoNode,
+    gamma: float,
+    weights: list[float],
+    divisor: float | None = None,
+):
+    orig_format = video.format
+    needs_conversion = orig_format.id != vs.RGBS
+
+    if needs_conversion:
+        video = core.resize.Bicubic(
+            video,
+            format=vs.RGBS,
+            matrix_in_s="709" if orig_format.color_family == vs.YUV else None,
+        )
+
+    def gamma_correct(video, gamma):
+        expr = f"x {gamma} pow"
+        return core.std.Expr(video, expr=expr)
+        # return core.std.Levels(
+        #     video, gamma=gamma, min_in=0.0, max_in=1.0, min_out=0.0, max_out=1.0
+        # )
+
+    video = gamma_correct(video, gamma)
+    video = average(video, weights, divisor)
+    video = gamma_correct(video, 1.0 / gamma)
+
+    if needs_conversion:
+        video = core.resize.Bicubic(
+            video,
+            format=orig_format.id,
+            matrix_s="709" if orig_format.color_family == vs.YUV else None,
+        )
+
+    return video
