@@ -7,6 +7,10 @@ build/
 bin/
 out/
 
+# vcpkg
+vcpkg_installed
+
+# visual studio
 .vs
 
 ### C++ ###
