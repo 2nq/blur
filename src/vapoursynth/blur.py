@@ -25,7 +25,6 @@ import blur.deduplicate
 import blur.deduplicate_rife
 import blur.interpolate
 import blur.weighting
-import blur.adjust
 import blur.utils as u
 
 video_path = Path(vars().get("video_path", ""))
