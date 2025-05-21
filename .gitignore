@@ -7,6 +7,9 @@ build/
 bin/
 out/
 
+# xmake
+.xmake
+
 # visual studio
 .vs
 
