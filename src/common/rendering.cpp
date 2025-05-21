@@ -208,6 +208,7 @@ RenderCommandsResult Render::build_render_commands() {
 				m_video_info.sample_rate != -1 ? m_video_info.sample_rate : 48000,
 				(1 / m_settings.input_timescale)
 			));
+			audio_filters.emplace_back(L"aresample=48000");
 		}
 
 		if (m_settings.output_timescale != 1.f) {
@@ -217,6 +218,7 @@ RenderCommandsResult Render::build_render_commands() {
 					m_video_info.sample_rate != -1 ? m_video_info.sample_rate : 48000,
 					m_settings.output_timescale
 				));
+				audio_filters.emplace_back(L"aresample=48000");
 			}
 			else {
 				audio_filters.push_back(std::format(L"atempo={}", m_settings.output_timescale));

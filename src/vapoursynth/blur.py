@@ -59,6 +59,12 @@ if vars().get("enable_lsmash") == "true":
 else:
     video = core.bs.VideoSource(source=video_path, cachemode=0)
 
+# input timescale
+if settings["timescale"]:
+    input_timescale = float(settings["input_timescale"])
+    if settings["input_timescale"] != 1:
+        video = u.assume_scaled_fps(video, 1 / input_timescale)
+
 if settings["deduplicate"] and settings["deduplicate_range"] != 0:
     deduplicate_range: int | None = int(settings["deduplicate_range"])
     if deduplicate_range == -1:  # -1 = infinite
@@ -99,13 +105,6 @@ if settings["deduplicate"] and settings["deduplicate_range"] != 0:
                 max_frames=deduplicate_range,
                 debug=settings["debug"],
             )
-
-# input timescale
-if settings["timescale"]:
-    if settings["input_timescale"] != 1:
-        video = core.std.AssumeFPS(
-            video, fpsnum=(video.fps * (1 / settings["input_timescale"]))
-        )
 
 # interpolation
 if settings["interpolate"]:
@@ -237,10 +236,9 @@ if settings["interpolate"]:
 
 # output timescale
 if settings["timescale"]:
-    if settings["output_timescale"] != 1:
-        video = core.std.AssumeFPS(
-            video, fpsnum=(video.fps * settings["output_timescale"])
-        )
+    output_timescale = float(settings["output_timescale"])
+    if output_timescale != 1:
+        video = u.assume_scaled_fps(video, output_timescale)
 
 # blurring
 if settings["blur"]:
