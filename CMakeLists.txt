@@ -221,3 +221,35 @@ setup_target(blur-tests)
 include(CTest)
 include(GoogleTest)
 gtest_discover_tests(blur-tests)
+
+# notification test
+set(TEST_IMGUI_SOURCES
+    dependencies/imgui/imgui.cpp
+    dependencies/imgui/imgui_demo.cpp
+    dependencies/imgui/imgui_draw.cpp
+    dependencies/imgui/imgui_tables.cpp
+    dependencies/imgui/imgui_widgets.cpp
+    dependencies/imgui/backends/imgui_impl_sdl3.cpp)
+
+add_executable(notif-test WIN32 "src/test/main.cpp" ${TEST_IMGUI_SOURCES})
+
+target_link_libraries(notif-test PRIVATE SDL3::SDL3)
+
+target_include_directories(notif-test
+                           PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/imgui)
+
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(LIBNOTIFY REQUIRED libnotify)
+pkg_check_modules(GLIB REQUIRED glib-2.0)
+
+target_include_directories(notif-test PRIVATE
+    ${LIBNOTIFY_INCLUDE_DIRS}
+    ${GLIB2_INCLUDE_DIRS}
+)
+
+target_link_libraries(notif-test PRIVATE
+    ${LIBNOTIFY_LIBRARIES}
+    ${GLIB2_LIBRARIES}
+    X11 Xext Xrandr
+)
