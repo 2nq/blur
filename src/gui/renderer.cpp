@@ -8,10 +8,10 @@
 #include "sdl.h"
 #include "tasks.h"
 #include "gui.h"
-#include "desktop_notification.h"
 
 #include "ui/ui.h"
 #include "render/render.h"
+#include "os/desktop_notification.h"
 
 #define DEBUG_RENDER 0
 

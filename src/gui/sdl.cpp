@@ -1,7 +1,7 @@
 #include "sdl.h"
 #include "common/config_app.h"
 #include "render/render.h"
-#include "desktop_notification.h"
+#include "os/desktop_notification.h"
 
 namespace {
 	std::unordered_map<SDL_SystemCursor, SDL_Cursor*> cursor_cache;

@@ -120,17 +120,15 @@ target_link_libraries(blur PRIVATE SDL3::SDL3 SDL3_image::SDL3_image
 
 if(APPLE)
   # Disable precompiled headers for the .mm file and .cpp file
-  set_source_files_properties(
-    src/gui/desktop_notification_mac.mm src/gui/desktop_notification.cpp
-    PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+  set_source_files_properties(src/gui/os/desktop_notification_mac.mm
+                              PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
   # Set Objective-C++ compilation for both files
-  set_source_files_properties(
-    src/gui/desktop_notification_mac.mm src/gui/desktop_notification.cpp
-    PROPERTIES COMPILE_FLAGS "-x objective-c++")
+  set_source_files_properties(src/gui/os/desktop_notification_mac.mm
+                              PROPERTIES COMPILE_FLAGS "-x objective-c++")
 
   # Add the .mm file for macOS notifications
-  target_sources(blur PRIVATE src/gui/desktop_notification_mac.mm)
+  target_sources(blur PRIVATE src/gui/os/desktop_notification_mac.mm)
 
   target_link_libraries(
     blur
