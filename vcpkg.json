@@ -25,6 +25,10 @@
     {
       "name": "cppwinrt",
       "platform": "windows"
+    },
+    {
+      "name": "sdbus-cpp",
+      "platform": "linux"
     }
   ],
   "vcpkg-configuration": {

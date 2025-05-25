@@ -87,86 +87,175 @@ void desktop_notification::cleanup() {
 }
 
 #elif __linux__
-#	include <libnotify/notify.h>
+#	include <sdbus-c++/sdbus-c++.h>
+#	include <iostream>
+#	include <unordered_map>
+#	include <mutex>
+#	include <thread>
 
-static std::string g_app_name;
-static desktop_notification::ClickCallback g_click_callback;
-static bool g_is_initialised = false;
+namespace desktop_notification {
+	// Simple globals for state
+	static std::unique_ptr<sdbus::IConnection> g_connection;
+	static std::unique_ptr<sdbus::IProxy> g_proxy;
+	static std::string g_app_name;
+	static bool g_initialized = false;
+	static std::unordered_map<uint32_t, ClickCallback> g_callbacks;
+	static std::mutex g_callbacks_mutex;
+	static std::thread g_event_thread;
+	static bool g_running = false;
 
-static void on_notification_closed(NotifyNotification* notification, gpointer user_data) {
-	g_object_unref(G_OBJECT(notification));
-}
+	static constexpr const char* SERVICE = "org.freedesktop.Notifications";
+	static constexpr const char* PATH = "/org/freedesktop/Notifications";
+	static constexpr const char* INTERFACE = "org.freedesktop.Notifications";
 
-static void on_notification_activated(NotifyNotification* notification, char* action, gpointer user_data) {
-	if (g_click_callback) {
-		g_click_callback();
+	static void handle_action_invoked(sdbus::Signal& signal) {
+		uint32_t id;
+		std::string action;
+		signal >> id >> action;
+
+		if (action == "default") {
+			std::lock_guard<std::mutex> lock(g_callbacks_mutex);
+			auto it = g_callbacks.find(id);
+			if (it != g_callbacks.end()) {
+				// Run callback in detached thread
+				std::thread([cb = it->second]() {
+					cb();
+				}).detach();
+			}
+		}
 	}
-}
 
-bool desktop_notification::initialise(const std::string& app_name) {
-	if (g_is_initialised) {
-		return true;
+	static void handle_notification_closed(sdbus::Signal& signal) {
+		uint32_t id;
+		uint32_t reason;
+		signal >> id >> reason;
+
+		std::lock_guard<std::mutex> lock(g_callbacks_mutex);
+		g_callbacks.erase(id);
 	}
 
-	g_app_name = app_name;
-	g_is_initialised = notify_init(app_name.c_str());
-	return g_is_initialised;
-}
+	static void event_loop() {
+		try {
+			while (g_running) {
+				g_connection->processPendingEvent();
+			}
+		}
+		catch (const std::exception& e) {
+			std::cerr << "Event loop error: " << e.what() << std::endl;
+		}
+	}
 
-bool desktop_notification::show(const std::string& title, const std::string& message, ClickCallback on_click) {
-	if (!g_is_initialised) {
-		if (!initialise(g_app_name.empty() ? "App" : g_app_name)) {
+	bool initialise(const std::string& app_name) {
+		if (g_initialized) {
+			return true;
+		}
+
+		try {
+			g_app_name = app_name;
+
+			// Create connection and proxy
+			g_connection = sdbus::createSessionBusConnection();
+			g_proxy = sdbus::createProxy(*g_connection, SERVICE, PATH);
+
+			// Register signal handlers
+			g_proxy->registerSignalHandler(INTERFACE, "ActionInvoked", handle_action_invoked);
+			g_proxy->registerSignalHandler(INTERFACE, "NotificationClosed", handle_notification_closed);
+			g_proxy->finishRegistration();
+
+			// Start event loop
+			g_running = true;
+			g_event_thread = std::thread(event_loop);
+
+			g_initialized = true;
+			return true;
+		}
+		catch (const std::exception& e) {
+			std::cerr << "Failed to initialize: " << e.what() << std::endl;
 			return false;
 		}
 	}
 
-	if (!notify_is_initted())
-		return false;
+	bool show(const std::string& title, const std::string& message, ClickCallback on_click) {
+		if (!g_initialized) {
+			if (!initialise(APPLICATION_NAME)) {
+				std::cerr << "Not initialized" << std::endl;
+				return false;
+			}
+		}
 
-	g_click_callback = on_click;
+		try {
+			std::vector<std::string> actions;
+			if (on_click) {
+				actions = { "default", "Click" };
+			}
 
-	NotifyNotification* notification = notify_notification_new(title.c_str(), message.c_str(), nullptr);
-	if (!notification)
-		return false;
+			auto method = g_proxy->createMethodCall(INTERFACE, "Notify");
+			method << g_app_name                              // app_name
+				   << uint32_t(0)                             // replaces_id
+				   << std::string("")                         // app_icon
+				   << title                                   // summary
+				   << message                                 // body
+				   << actions                                 // actions
+				   << std::map<std::string, sdbus::Variant>{} // hints
+				   << int32_t(-1);                            // timeout
 
-	notify_notification_set_timeout(notification, 5000); // 5 seconds
+			auto reply = g_proxy->callMethod(method);
+			uint32_t id;
+			reply >> id;
 
-	if (on_click) {
-		notify_notification_add_action(
-			notification, "default", "Open", NOTIFY_ACTION_CALLBACK(on_notification_activated), nullptr, nullptr
-		);
+			if (on_click) {
+				std::lock_guard<std::mutex> lock(g_callbacks_mutex);
+				g_callbacks[id] = on_click;
+			}
+
+			return true;
+		}
+		catch (const std::exception& e) {
+			std::cerr << "Failed to show notification: " << e.what() << std::endl;
+			return false;
+		}
 	}
 
-	g_signal_connect(notification, "closed", G_CALLBACK(on_notification_closed), nullptr);
-
-	GError* error = nullptr;
-	bool success = notify_notification_show(notification, &error);
-
-	if (error) {
-		g_error_free(error);
-		g_object_unref(G_OBJECT(notification));
-		return false;
+	bool is_supported() {
+		try {
+			auto conn = sdbus::createSessionBusConnection();
+			auto proxy = sdbus::createProxy(*conn, SERVICE, PATH);
+			auto method = proxy->createMethodCall(INTERFACE, "GetCapabilities");
+			proxy->callMethod(method);
+			return true;
+		}
+		catch (...) {
+			return false;
+		}
 	}
 
-	return success;
-}
-
-bool desktop_notification::is_supported() {
-	return notify_is_initted();
-}
-
-bool desktop_notification::has_permission() {
-	return notify_is_initted();
-}
-
-void desktop_notification::cleanup() {
-	if (!g_is_initialised) {
-		return;
+	bool has_permission() {
+		return is_supported(); // On Linux, D-Bus access implies permission
 	}
-	if (notify_is_initted()) {
-		notify_uninit();
-	}
-	g_is_initialised = false;
-}
 
+	void cleanup() {
+		if (!g_initialized)
+			return;
+
+		g_running = false;
+
+		if (g_event_thread.joinable()) {
+			try {
+				g_connection->leaveEventLoop();
+			}
+			catch (...) {
+			}
+			g_event_thread.join();
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(g_callbacks_mutex);
+			g_callbacks.clear();
+		}
+
+		g_proxy.reset();
+		g_connection.reset();
+		g_initialized = false;
+	}
+}
 #endif
