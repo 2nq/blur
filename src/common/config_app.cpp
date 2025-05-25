@@ -1,6 +1,5 @@
 #include "config_app.h"
 #include "config_base.h"
-#include "gui/desktop_notification.h"
 
 void config_app::create(const std::filesystem::path& filepath, const GlobalAppSettings& current_settings) {
 	std::ofstream output(filepath);
