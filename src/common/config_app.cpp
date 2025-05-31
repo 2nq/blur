@@ -17,6 +17,12 @@ void config_app::create(const std::filesystem::path& filepath, const GlobalAppSe
 	output << "- updates" << "\n";
 	output << "check for updates: " << (current_settings.check_updates ? "true" : "false") << "\n";
 	output << "include beta updates: " << (current_settings.check_beta ? "true" : "false") << "\n";
+
+#ifdef __linux__
+	output << "\n";
+	output << "- linux" << "\n";
+	output << "vapoursynth lib path: " << current_settings.vapoursynth_lib_path << "\n";
+#endif
 }
 
 GlobalAppSettings config_app::parse(const std::filesystem::path& config_filepath) {
@@ -33,6 +39,10 @@ GlobalAppSettings config_app::parse(const std::filesystem::path& config_filepath
 
 	config_base::extract_config_value(config_map, "check for updates", settings.check_updates);
 	config_base::extract_config_value(config_map, "include beta updates", settings.check_beta);
+
+#ifdef __linux__
+	config_base::extract_config_value(config_map, "vapoursynth lib path", settings.vapoursynth_lib_path);
+#endif
 
 	// recreate the config file using the parsed values (keeps nice formatting)
 	create(config_filepath, settings);

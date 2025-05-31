@@ -1,5 +1,9 @@
 ﻿#include "rendering_frame.h"
 
+#ifdef __linux__
+#	include "config_app.h"
+#endif
+
 RenderCommandsResult FrameRender::build_render_commands(
 	const std::filesystem::path& input_path, const std::filesystem::path& output_path, const BlurSettings& settings
 ) {
@@ -102,6 +106,14 @@ FrameRender::DoRenderResult FrameRender::do_render(RenderCommands render_command
 			env["PYTHONPATH"] = (blur.resources_path / "../lib/python3.12/site-packages").string();
 #endif
 		}
+
+#if defined(__linux__)
+		auto app_config = config_app::get_app_config();
+		if (!app_config.vapoursynth_lib_path.empty()) {
+			env["LD_LIBRARY_PATH"] = app_config.vapoursynth_lib_path;
+			env["PYTHONPATH"] = app_config.vapoursynth_lib_path + "/python3.12/site-packages";
+		}
+#endif
 
 		// Declare as local variables first, then move or assign
 		auto vspipe_process = bp::child(

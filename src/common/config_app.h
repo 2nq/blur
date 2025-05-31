@@ -7,6 +7,10 @@ struct GlobalAppSettings {
 	bool check_updates = true;
 	bool check_beta = false;
 
+#ifdef __linux__
+	std::string vapoursynth_lib_path;
+#endif
+
 	bool operator==(const GlobalAppSettings& other) const = default;
 };
 
