@@ -1,35 +1,62 @@
 #pragma once
 
 namespace config_base {
-	std::map<std::string, std::string> read_config_map(const std::filesystem::path& config_filepath);
-
 	template<typename T>
-	void extract_config_value(const std::map<std::string, std::string>& config, const std::string& var, T& out) {
-		if (!config.contains(var)) {
-			DEBUG_LOG("config missing variable '{}'", var);
-			return;
-		}
-
+	void extract_toml_value(const toml::table& config, const std::string& key, T& out, const T& default_value) {
 		try {
-			std::stringstream ss(config.at(var));
-			ss.exceptions(std::ios::failbit); // enable exceptions
-			ss >> std::boolalpha >> out;      // boolalpha: enable true/false bool parsing
+			auto node = config.at_path(key);
+			if (node) {
+				if constexpr (std::is_same_v<T, std::string>) {
+					if (auto val = node.value<std::string>()) {
+						out = *val;
+					}
+					else {
+						out = default_value;
+					}
+				}
+				else if constexpr (std::is_same_v<T, bool>) {
+					if (auto val = node.value<bool>()) {
+						out = *val;
+					}
+					else {
+						out = default_value;
+					}
+				}
+				else if constexpr (std::is_same_v<T, int>) {
+					if (auto val = node.value<int64_t>()) {
+						out = static_cast<int>(*val);
+					}
+					else {
+						out = default_value;
+					}
+				}
+				else if constexpr (std::is_same_v<T, float>) {
+					if (auto val = node.value<double>()) {
+						out = static_cast<float>(*val);
+					}
+					else {
+						out = default_value;
+					}
+				}
+				else {
+					// For other types, try direct assignment
+					if (auto val = node.value<T>()) {
+						out = *val;
+					}
+					else {
+						out = default_value;
+					}
+				}
+			}
+			else {
+				DEBUG_LOG("TOML config missing key '{}'", key);
+				out = default_value;
+			}
 		}
-		catch (const std::exception&) {
-			DEBUG_LOG("failed to parse config variable '{}' (value: {})", var, config.at(var));
-			return;
+		catch (const std::exception& e) {
+			DEBUG_LOG("Failed to parse TOML config key '{}': {}", key, e.what());
+			out = default_value;
 		}
-	}
-
-	inline void extract_config_string(
-		const std::map<std::string, std::string>& config, const std::string& var, std::string& out
-	) {
-		if (!config.contains(var)) {
-			DEBUG_LOG("config missing variable '{}'", var);
-			return;
-		}
-
-		out = config.at(var);
 	}
 
 	template<typename ConfigType>

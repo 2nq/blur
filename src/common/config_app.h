@@ -15,9 +15,8 @@ struct GlobalAppSettings {
 };
 
 namespace config_app {
-	const std::string APP_CONFIG_FILENAME = "blur.cfg";
-
-	// inline const std::vector<std::string> CHECK_UPDATES_OPTIONS = { "off", "on", "beta" };
+	const std::string APP_CONFIG_FILENAME = "app.toml";
+	inline const GlobalAppSettings DEFAULT_APP_CONFIG;
 
 	void create(const std::filesystem::path& filepath, const GlobalAppSettings& current_settings = GlobalAppSettings());
 	GlobalAppSettings parse(const std::filesystem::path& config_filepath);

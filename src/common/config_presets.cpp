@@ -1,5 +1,6 @@
 #include "config_presets.h"
 #include "config_base.h"
+#include <toml++/toml.hpp>
 
 namespace {
 	std::vector<std::wstring> get_ffmpeg_args(std::string params_str, int quality) {
@@ -11,83 +12,121 @@ namespace {
 }
 
 void config_presets::create(const std::filesystem::path& filepath, const PresetSettings& current_settings) {
+	toml::table config;
+
+	// Version
+	config.insert("version", "v" + BLUR_VERSION);
+
+	// Create sections for each GPU type
+	for (const auto& [gpu_type, codec_params] : current_settings.presets) {
+		auto gpu_table = toml::table{};
+
+		for (const auto& [codec_name, params] : codec_params) {
+			gpu_table.insert(codec_name, params);
+		}
+
+		config.insert(gpu_type, gpu_table);
+	}
+
+	// Write to file
 	std::ofstream output(filepath);
+	output << config;
+}
 
-	output << "[blur v" << BLUR_VERSION << "]" << "\n";
+tl::expected<void, std::string> config_presets::validate(PresetSettings& config, bool fix) {
+	std::set<std::string> errors;
 
-	for (const auto& [gpu_type, preset_map] : current_settings.presets) {
-		output << "\n";
-		output << "- " << gpu_type << "\n";
+	// Validate that each GPU type has at least one preset
+	for (const auto& [gpu_type, codec_params] : config.presets) {
+		if (codec_params.empty()) {
+			errors.insert(std::format("GPU type '{}' has no presets defined", gpu_type));
 
-		for (const auto& [preset_name, preset_params] : preset_map) {
-			output << preset_name << ": " << preset_params << "\n";
+			if (fix) {
+				// Add default h264 preset if missing
+				auto& presets = const_cast<PresetSettings::CodecParams&>(codec_params);
+				presets.emplace_back("h264", "-c:v libx264 -pix_fmt yuv420p -preset medium -crf {quality}");
+			}
 		}
 	}
+
+	// Validate that essential presets exist
+	const std::vector<std::string> essential_gpu_types = { "cpu", "nvidia", "amd", "intel" };
+	for (const std::string& gpu_type : essential_gpu_types) {
+		bool found = false;
+		for (const auto& [type, _] : config.presets) {
+			if (type == gpu_type) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
+			errors.insert(std::format("Essential GPU type '{}' is missing", gpu_type));
+
+			if (fix) {
+				// Add missing GPU type with default preset from DEFAULT_CONFIG
+				const auto* default_params = DEFAULT_CONFIG.find_preset_group(gpu_type);
+				if (default_params) {
+					config.presets.emplace_back(gpu_type, *default_params);
+				}
+			}
+		}
+	}
+
+	if (!errors.empty())
+		return tl::unexpected(u::join(errors, " "));
+
+	return {};
 }
 
 PresetSettings config_presets::parse(const std::filesystem::path& config_filepath) {
-	PresetSettings settings = DEFAULT_CONFIG;
+	PresetSettings settings;
 
-	std::ifstream file(config_filepath);
-	if (!file)
-		return settings; // defaults if file couldn't be opened
+	try {
+		toml::table config = toml::parse_file(config_filepath.string());
 
-	std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		// Clear default presets
+		settings.presets.clear();
 
-	std::istringstream stream(content);
-	std::string line;
-	std::string current_gpu_type;
-	PresetSettings::CodecParams* current_codec_params = nullptr;
+		// Parse each GPU type section
+		for (const auto& [key, value] : config) {
+			std::string gpu_type = std::string(key.str());
 
-	while (std::getline(stream, line)) {
-		line = u::trim(line);
+			// Skip version and other non-GPU sections
+			if (gpu_type == "version") {
+				continue;
+			}
 
-		if (line.empty() || line.front() == '[' || line.front() == '#') {
-			continue;
-		}
+			if (value.is_table()) {
+				const auto* gpu_table = value.as_table();
+				PresetSettings::CodecParams codec_params;
 
-		if (line.front() == '-') {
-			current_gpu_type = u::trim(line.substr(1));
+				for (const auto& [codec_key, codec_value] : *gpu_table) {
+					std::string codec_name = std::string(codec_key.str());
 
-			current_codec_params = nullptr;
-			for (auto& [gpu_name, params] : settings.presets) {
-				if (gpu_name == current_gpu_type) {
-					current_codec_params = &params;
-					break;
+					if (codec_value.is_string()) {
+						std::string params = std::string(codec_value.as_string()->get());
+						codec_params.emplace_back(codec_name, params);
+					}
+				}
+
+				if (!codec_params.empty()) {
+					settings.presets.emplace_back(gpu_type, std::move(codec_params));
 				}
 			}
-
-			// new gpu type
-			if (!current_codec_params) {
-				settings.presets.push_back({ current_gpu_type, {} });
-				current_codec_params = &settings.presets.back().second;
-			}
-
-			continue;
 		}
 
-		size_t delimiter_pos = line.find(':');
-		if (delimiter_pos != std::string::npos && current_codec_params) {
-			std::string preset_name = u::trim(line.substr(0, delimiter_pos));
-			std::string preset_params = u::trim(line.substr(delimiter_pos + 1));
-
-			bool found = false;
-			for (auto& [name, params] : *current_codec_params) {
-				if (name == preset_name) {
-					params = preset_params; // already exists - update
-					found = true;
-					break;
-				}
-			}
-
-			// new preset
-			if (!found) {
-				current_codec_params->emplace_back(preset_name, preset_params);
-			}
+		// If no presets were loaded, use defaults
+		if (settings.presets.empty()) {
+			settings = DEFAULT_CONFIG;
 		}
 	}
+	catch (const toml::parse_error& err) {
+		DEBUG_LOG("Error parsing TOML preset config file at %s: %s", config_filepath.string().c_str(), err.what());
+		return DEFAULT_CONFIG; // Return default settings on parse error
+	}
 
-	// recreate the config file
+	// Recreate the config file using the parsed values (keeps nice formatting)
 	create(config_filepath, settings);
 
 	return settings;
@@ -98,18 +137,7 @@ std::filesystem::path config_presets::get_preset_config_path() {
 }
 
 PresetSettings config_presets::get_preset_config() {
-	using namespace std::chrono;
-	static constexpr auto reload_interval = seconds(5);
-	static PresetSettings cached;
-	static auto last_reload_time = steady_clock::now() - reload_interval;
-
-	auto now = steady_clock::now();
-	if (now - last_reload_time >= reload_interval) {
-		cached = config_base::load_config<PresetSettings>(get_preset_config_path(), create, parse);
-		last_reload_time = now;
-	}
-
-	return cached;
+	return config_base::load_config<PresetSettings>(get_preset_config_path(), create, parse);
 }
 
 std::vector<config_presets::PresetDetails> config_presets::get_available_presets(

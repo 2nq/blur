@@ -1,114 +1,149 @@
 #include "config_blur.h"
 #include "config_base.h"
+#include <toml++/toml.hpp>
 
 void config_blur::create(const std::filesystem::path& filepath, const BlurSettings& current_settings) {
-	std::ofstream output(filepath);
+	toml::table config;
 
-	output << "[blur v" << BLUR_VERSION << "]" << "\n";
+	// Version
+	config.insert("version", "v" + BLUR_VERSION);
 
-	output << "\n";
-	output << "- blur" << "\n";
-	output << "blur: " << (current_settings.blur ? "true" : "false") << "\n";
-	output << "blur amount: " << current_settings.blur_amount << "\n";
-	output << "blur output fps: " << current_settings.blur_output_fps << "\n";
-	output << "blur weighting: " << current_settings.blur_weighting << "\n";
-	output << "blur gamma: " << current_settings.blur_gamma << "\n";
+	// Blur section
+	auto blur_table = toml::table{};
+	blur_table.insert("blur", current_settings.blur);
+	blur_table.insert("blur_amount", current_settings.blur_amount);
+	blur_table.insert("blur_output_fps", current_settings.blur_output_fps);
+	blur_table.insert("blur_weighting", current_settings.blur_weighting);
+	blur_table.insert("blur_gamma", current_settings.blur_gamma);
+	config.insert("blur", blur_table);
 
-	output << "\n";
-	output << "- interpolation" << "\n";
-	output << "interpolate: " << (current_settings.interpolate ? "true" : "false") << "\n";
-	output << "interpolated fps: " << current_settings.interpolated_fps << "\n";
-#ifndef __APPLE__ // rife dont worky on mac (see renderer.cpp)
-	output << "interpolation method: " << current_settings.interpolation_method << "\n";
+	// Interpolation section
+	auto interpolation_table = toml::table{};
+	interpolation_table.insert("interpolate", current_settings.interpolate);
+	interpolation_table.insert("interpolated_fps", current_settings.interpolated_fps);
+#ifndef __APPLE__
+	interpolation_table.insert("interpolation_method", current_settings.interpolation_method);
+#endif
+	config.insert("interpolation", interpolation_table);
 
-	output << "\n";
-	output << "- pre-interpolation" << "\n";
-	output << "pre-interpolate: " << (current_settings.pre_interpolate ? "true" : "false") << "\n";
-	output << "pre-interpolated fps: " << current_settings.pre_interpolated_fps << "\n";
+#ifndef __APPLE__
+	// Pre-interpolation section
+	auto pre_interpolation_table = toml::table{};
+	pre_interpolation_table.insert("pre_interpolate", current_settings.pre_interpolate);
+	pre_interpolation_table.insert("pre_interpolated_fps", current_settings.pre_interpolated_fps);
+	config.insert("pre_interpolation", pre_interpolation_table);
 #endif
 
-	output << "\n";
-	output << "- deduplication" << "\n";
-	output << "deduplicate: " << (current_settings.deduplicate ? "true" : "false") << "\n";
-	output << "deduplicate method: " << current_settings.deduplicate_method << "\n";
+	// Deduplication section
+	auto deduplication_table = toml::table{};
+	deduplication_table.insert("deduplicate", current_settings.deduplicate);
+	deduplication_table.insert("deduplicate_method", current_settings.deduplicate_method);
+	config.insert("deduplication", deduplication_table);
 
-	output << "\n";
-	output << "- rendering" << "\n";
-	output << "encode preset: " << current_settings.encode_preset << "\n";
-	output << "quality: " << current_settings.quality << "\n";
-	output << "preview: " << (current_settings.preview ? "true" : "false") << "\n";
-	output << "detailed filenames: " << (current_settings.detailed_filenames ? "true" : "false") << "\n";
-	output << "copy dates: " << (current_settings.copy_dates ? "true" : "false") << "\n";
+	// Rendering section
+	auto rendering_table = toml::table{};
+	rendering_table.insert("encode_preset", current_settings.encode_preset);
+	rendering_table.insert("quality", current_settings.quality);
+	rendering_table.insert("preview", current_settings.preview);
+	rendering_table.insert("detailed_filenames", current_settings.detailed_filenames);
+	rendering_table.insert("copy_dates", current_settings.copy_dates);
+	config.insert("rendering", rendering_table);
 
-	output << "\n";
-	output << "- gpu acceleration" << "\n";
-	output << "gpu decoding: " << (current_settings.gpu_decoding ? "true" : "false") << "\n";
-	output << "gpu interpolation: " << (current_settings.gpu_interpolation ? "true" : "false") << "\n";
-	output << "gpu encoding: " << (current_settings.gpu_encoding ? "true" : "false") << "\n";
-	output << "gpu type (nvidia/amd/intel): " << current_settings.gpu_type << "\n";
-	output << "rife gpu number: " << current_settings.rife_gpu_index << "\n";
+	// GPU acceleration section
+	auto gpu_table = toml::table{};
+	gpu_table.insert("gpu_decoding", current_settings.gpu_decoding);
+	gpu_table.insert("gpu_interpolation", current_settings.gpu_interpolation);
+	gpu_table.insert("gpu_encoding", current_settings.gpu_encoding);
+	gpu_table.insert("gpu_type", current_settings.gpu_type);
+	gpu_table.insert("rife_gpu_number", current_settings.rife_gpu_index);
+	config.insert("gpu", gpu_table);
 
-	output << "\n";
-	output << "- timescale" << "\n";
-	output << "timescale: " << (current_settings.timescale ? "true" : "false") << "\n";
-	output << "input timescale: " << current_settings.input_timescale << "\n";
-	output << "output timescale: " << current_settings.output_timescale << "\n";
-	output << "adjust timescaled audio pitch: " << (current_settings.output_timescale_audio_pitch ? "true" : "false")
-		   << "\n";
+	// Timescale section
+	auto timescale_table = toml::table{};
+	timescale_table.insert("timescale", current_settings.timescale);
+	timescale_table.insert("input_timescale", current_settings.input_timescale);
+	timescale_table.insert("output_timescale", current_settings.output_timescale);
+	timescale_table.insert("adjust_timescaled_audio_pitch", current_settings.output_timescale_audio_pitch);
+	config.insert("timescale", timescale_table);
 
-	output << "\n";
-	output << "- filters" << "\n";
-	output << "filters: " << (current_settings.filters ? "true" : "false") << "\n";
-	output << "brightness: " << current_settings.brightness << "\n";
-	output << "saturation: " << current_settings.saturation << "\n";
-	output << "contrast: " << current_settings.contrast << "\n";
+	// Filters section
+	auto filters_table = toml::table{};
+	filters_table.insert("filters", current_settings.filters);
+	filters_table.insert("brightness", current_settings.brightness);
+	filters_table.insert("saturation", current_settings.saturation);
+	filters_table.insert("contrast", current_settings.contrast);
+	config.insert("filters", filters_table);
 
-	output << "\n";
-	output << "- advanced" << "\n";
-	output << "advanced: " << (current_settings.override_advanced ? "true" : "false") << "\n";
+	// Advanced section
+	auto advanced_table = toml::table{};
+	advanced_table.insert("advanced", current_settings.override_advanced);
+	config.insert("advanced", advanced_table);
 
 	if (current_settings.override_advanced) {
-		output << "\n";
-		output << "- advanced deduplication" << "\n";
-		output << "deduplicate range: " << current_settings.advanced.deduplicate_range << "\n";
-		output << "deduplicate threshold: " << current_settings.advanced.deduplicate_threshold << "\n";
+		// Advanced deduplication
+		auto advanced_deduplication_table = toml::table{};
+		advanced_deduplication_table.insert("deduplicate_range", current_settings.advanced.deduplicate_range);
+		advanced_deduplication_table.insert("deduplicate_threshold", current_settings.advanced.deduplicate_threshold);
+		advanced_table.insert("deduplication", advanced_deduplication_table);
 
-		output << "\n";
-		output << "- advanced rendering" << "\n";
-		output << "video container: " << current_settings.advanced.video_container << "\n";
-		output << "custom ffmpeg filters: " << current_settings.advanced.ffmpeg_override << "\n";
-		output << "debug: " << (current_settings.advanced.debug ? "true" : "false") << "\n";
+		// Advanced rendering
+		auto advanced_rendering_table = toml::table{};
+		advanced_rendering_table.insert("video_container", current_settings.advanced.video_container);
+		advanced_rendering_table.insert("custom_ffmpeg_filters", current_settings.advanced.ffmpeg_override);
+		advanced_rendering_table.insert("debug", current_settings.advanced.debug);
+		advanced_table.insert("rendering", advanced_rendering_table);
 
-		output << "\n";
-		output << "- advanced blur" << "\n";
-		output << "blur weighting gaussian std dev: " << current_settings.advanced.blur_weighting_gaussian_std_dev
-			   << "\n";
-		output << "blur weighting gaussian mean: " << current_settings.advanced.blur_weighting_gaussian_mean << "\n";
-		output << "blur weighting gaussian bound: " << current_settings.advanced.blur_weighting_gaussian_bound << "\n";
+		// Advanced blur
+		auto advanced_blur_table = toml::table{};
+		advanced_blur_table.insert(
+			"blur_weighting_gaussian_std_dev", current_settings.advanced.blur_weighting_gaussian_std_dev
+		);
+		advanced_blur_table.insert(
+			"blur_weighting_gaussian_mean", current_settings.advanced.blur_weighting_gaussian_mean
+		);
+		advanced_blur_table.insert(
+			"blur_weighting_gaussian_bound", current_settings.advanced.blur_weighting_gaussian_bound
+		);
+		advanced_table.insert("blur", advanced_blur_table);
 
-		output << "\n";
-		output << "- advanced interpolation" << "\n";
-		output << "svp interpolation preset: " << current_settings.advanced.svp_interpolation_preset << "\n";
-		output << "svp interpolation algorithm: " << current_settings.advanced.svp_interpolation_algorithm << "\n";
-		output << "interpolation block size: " << current_settings.advanced.interpolation_blocksize << "\n";
-		output << "interpolation mask area: " << current_settings.advanced.interpolation_mask_area << "\n";
-#ifndef __APPLE__ // rife issue again
-		output << "rife model: " << current_settings.advanced.rife_model << "\n";
+		// Advanced interpolation
+		auto advanced_interpolation_table = toml::table{};
+		advanced_interpolation_table.insert(
+			"svp_interpolation_preset", current_settings.advanced.svp_interpolation_preset
+		);
+		advanced_interpolation_table.insert(
+			"svp_interpolation_algorithm", current_settings.advanced.svp_interpolation_algorithm
+		);
+		advanced_interpolation_table.insert(
+			"interpolation_block_size", current_settings.advanced.interpolation_blocksize
+		);
+		advanced_interpolation_table.insert(
+			"interpolation_mask_area", current_settings.advanced.interpolation_mask_area
+		);
+#ifndef __APPLE__
+		advanced_interpolation_table.insert("rife_model", current_settings.advanced.rife_model);
 #endif
+		advanced_table.insert("interpolation", advanced_interpolation_table);
 
 		if (current_settings.advanced.manual_svp) {
-			output << "\n";
-			output << "- manual svp override" << "\n";
-			output << "manual svp: " << (current_settings.advanced.manual_svp ? "true" : "false") << "\n";
-			output << "super string: " << current_settings.advanced.super_string << "\n";
-			output << "vectors string: " << current_settings.advanced.vectors_string << "\n";
-			output << "smooth string: " << current_settings.advanced.smooth_string << "\n";
+			// Manual SVP override
+			auto manual_svp_table = toml::table{};
+			manual_svp_table.insert("manual_svp", current_settings.advanced.manual_svp);
+			manual_svp_table.insert("super_string", current_settings.advanced.super_string);
+			manual_svp_table.insert("vectors_string", current_settings.advanced.vectors_string);
+			manual_svp_table.insert("smooth_string", current_settings.advanced.smooth_string);
+			advanced_table.insert("svp", manual_svp_table);
 		}
 	}
 
-	output << "\n";
-	output << "- gui" << "\n";
-	output << "blur amount tied to fps: " << (current_settings.blur_amount_tied_to_fps ? "true" : "false") << "\n";
+	// GUI section
+	auto gui_table = toml::table{};
+	gui_table.insert("blur_amount_tied_to_fps", current_settings.blur_amount_tied_to_fps);
+	config.insert("gui", gui_table);
+
+	// Write to file
+	std::ofstream output(filepath);
+	output << config;
 }
 
 tl::expected<void, std::string> config_blur::validate(BlurSettings& config, bool fix) {
@@ -148,104 +183,220 @@ tl::expected<void, std::string> config_blur::validate(BlurSettings& config, bool
 }
 
 BlurSettings config_blur::parse(const std::filesystem::path& config_filepath) {
-	auto config_map = config_base::read_config_map(config_filepath);
-
 	BlurSettings settings;
 
-	config_base::extract_config_value(config_map, "blur", settings.blur);
-	config_base::extract_config_value(config_map, "blur amount", settings.blur_amount);
-	config_base::extract_config_value(config_map, "blur output fps", settings.blur_output_fps);
-	config_base::extract_config_string(config_map, "blur weighting", settings.blur_weighting);
-	config_base::extract_config_value(config_map, "blur gamma", settings.blur_gamma);
+	try {
+		toml::table config = toml::parse_file(config_filepath.string());
 
-	config_base::extract_config_value(config_map, "interpolate", settings.interpolate);
-	config_base::extract_config_string(config_map, "interpolated fps", settings.interpolated_fps);
-#ifndef __APPLE__ // rife dont worky on mac (see renderer.cpp)
-	config_base::extract_config_string(config_map, "interpolation method", settings.interpolation_method);
+		// Extract values using the new template functions from config_base.h
+		config_base::extract_toml_value(config, "blur.blur", settings.blur, DEFAULT_CONFIG.blur);
+		config_base::extract_toml_value(config, "blur.blur_amount", settings.blur_amount, DEFAULT_CONFIG.blur_amount);
+		config_base::extract_toml_value(
+			config, "blur.blur_output_fps", settings.blur_output_fps, DEFAULT_CONFIG.blur_output_fps
+		);
+		config_base::extract_toml_value(
+			config, "blur.blur_weighting", settings.blur_weighting, DEFAULT_CONFIG.blur_weighting
+		);
+		config_base::extract_toml_value(config, "blur.blur_gamma", settings.blur_gamma, DEFAULT_CONFIG.blur_gamma);
 
-	config_base::extract_config_value(config_map, "pre-interpolate", settings.pre_interpolate);
-	config_base::extract_config_string(config_map, "pre-interpolated fps", settings.pre_interpolated_fps);
+		config_base::extract_toml_value(
+			config, "interpolation.interpolate", settings.interpolate, DEFAULT_CONFIG.interpolate
+		);
+		config_base::extract_toml_value(
+			config, "interpolation.interpolated_fps", settings.interpolated_fps, DEFAULT_CONFIG.interpolated_fps
+		);
+#ifndef __APPLE__
+		config_base::extract_toml_value(
+			config,
+			"interpolation.interpolation_method",
+			settings.interpolation_method,
+			DEFAULT_CONFIG.interpolation_method
+		);
+
+		config_base::extract_toml_value(
+			config, "pre_interpolation.pre_interpolate", settings.pre_interpolate, DEFAULT_CONFIG.pre_interpolate
+		);
+		config_base::extract_toml_value(
+			config,
+			"pre_interpolation.pre_interpolated_fps",
+			settings.pre_interpolated_fps,
+			DEFAULT_CONFIG.pre_interpolated_fps
+		);
 #endif
 
-	config_base::extract_config_value(config_map, "deduplicate", settings.deduplicate);
-	config_base::extract_config_value(config_map, "deduplicate method", settings.deduplicate_method);
-
-	config_base::extract_config_value(config_map, "encode preset", settings.encode_preset);
-	config_base::extract_config_value(config_map, "quality", settings.quality);
-	config_base::extract_config_value(config_map, "preview", settings.preview);
-	config_base::extract_config_value(config_map, "detailed filenames", settings.detailed_filenames);
-	config_base::extract_config_value(config_map, "copy dates", settings.copy_dates);
-
-	config_base::extract_config_value(config_map, "gpu decoding", settings.gpu_decoding);
-	config_base::extract_config_value(config_map, "gpu interpolation", settings.gpu_interpolation);
-	config_base::extract_config_value(config_map, "gpu encoding", settings.gpu_encoding);
-	config_base::extract_config_string(config_map, "gpu type (nvidia/amd/intel)", settings.gpu_type);
-	config_base::extract_config_value(config_map, "rife gpu number", settings.rife_gpu_index);
-
-	settings.verify_gpu_encoding();
-
-	if (settings.rife_gpu_index == -1) {
-		settings.set_fastest_rife_gpu();
-	}
-
-	config_base::extract_config_value(config_map, "timescale", settings.timescale);
-	config_base::extract_config_value(config_map, "input timescale", settings.input_timescale);
-	config_base::extract_config_value(config_map, "output timescale", settings.output_timescale);
-	config_base::extract_config_value(
-		config_map, "adjust timescaled audio pitch", settings.output_timescale_audio_pitch
-	);
-
-	config_base::extract_config_value(config_map, "filters", settings.filters);
-	config_base::extract_config_value(config_map, "brightness", settings.brightness);
-	config_base::extract_config_value(config_map, "saturation", settings.saturation);
-	config_base::extract_config_value(config_map, "contrast", settings.contrast);
-
-	config_base::extract_config_value(config_map, "advanced", settings.override_advanced);
-
-	if (settings.override_advanced) {
-		config_base::extract_config_value(config_map, "deduplicate range", settings.advanced.deduplicate_range);
-		config_base::extract_config_string(
-			config_map, "deduplicate threshold", settings.advanced.deduplicate_threshold
+		config_base::extract_toml_value(
+			config, "deduplication.deduplicate", settings.deduplicate, DEFAULT_CONFIG.deduplicate
+		);
+		config_base::extract_toml_value(
+			config, "deduplication.deduplicate_method", settings.deduplicate_method, DEFAULT_CONFIG.deduplicate_method
 		);
 
-		config_base::extract_config_value(config_map, "video container", settings.advanced.video_container);
-		config_base::extract_config_string(config_map, "custom ffmpeg filters", settings.advanced.ffmpeg_override);
-		config_base::extract_config_value(config_map, "debug", settings.advanced.debug);
+		config_base::extract_toml_value(
+			config, "rendering.encode_preset", settings.encode_preset, DEFAULT_CONFIG.encode_preset
+		);
+		config_base::extract_toml_value(config, "rendering.quality", settings.quality, DEFAULT_CONFIG.quality);
+		config_base::extract_toml_value(config, "rendering.preview", settings.preview, DEFAULT_CONFIG.preview);
+		config_base::extract_toml_value(
+			config, "rendering.detailed_filenames", settings.detailed_filenames, DEFAULT_CONFIG.detailed_filenames
+		);
+		config_base::extract_toml_value(config, "rendering.copy_dates", settings.copy_dates, DEFAULT_CONFIG.copy_dates);
 
-		config_base::extract_config_value(
-			config_map, "blur weighting gaussian std dev", settings.advanced.blur_weighting_gaussian_std_dev
+		config_base::extract_toml_value(config, "gpu.gpu_decoding", settings.gpu_decoding, DEFAULT_CONFIG.gpu_decoding);
+		config_base::extract_toml_value(
+			config, "gpu.gpu_interpolation", settings.gpu_interpolation, DEFAULT_CONFIG.gpu_interpolation
 		);
-		config_base::extract_config_value(
-			config_map, "blur weighting gaussian mean", settings.advanced.blur_weighting_gaussian_mean
-		);
-		config_base::extract_config_string(
-			config_map, "blur weighting gaussian bound", settings.advanced.blur_weighting_gaussian_bound
+		config_base::extract_toml_value(config, "gpu.gpu_encoding", settings.gpu_encoding, DEFAULT_CONFIG.gpu_encoding);
+		config_base::extract_toml_value(config, "gpu.gpu_type", settings.gpu_type, DEFAULT_CONFIG.gpu_type);
+		config_base::extract_toml_value(
+			config, "gpu.rife_gpu_number", settings.rife_gpu_index, DEFAULT_CONFIG.rife_gpu_index
 		);
 
-		config_base::extract_config_string(
-			config_map, "svp interpolation preset", settings.advanced.svp_interpolation_preset
+		settings.verify_gpu_encoding();
+
+		if (settings.rife_gpu_index == -1) {
+			settings.set_fastest_rife_gpu();
+		}
+
+		config_base::extract_toml_value(config, "timescale.timescale", settings.timescale, DEFAULT_CONFIG.timescale);
+		config_base::extract_toml_value(
+			config, "timescale.input_timescale", settings.input_timescale, DEFAULT_CONFIG.input_timescale
 		);
-		config_base::extract_config_string(
-			config_map, "svp interpolation algorithm", settings.advanced.svp_interpolation_algorithm
+		config_base::extract_toml_value(
+			config, "timescale.output_timescale", settings.output_timescale, DEFAULT_CONFIG.output_timescale
 		);
-		config_base::extract_config_string(
-			config_map, "interpolation block size", settings.advanced.interpolation_blocksize
+		config_base::extract_toml_value(
+			config,
+			"timescale.adjust_timescaled_audio_pitch",
+			settings.output_timescale_audio_pitch,
+			DEFAULT_CONFIG.output_timescale_audio_pitch
 		);
-		config_base::extract_config_value(
-			config_map, "interpolation mask area", settings.advanced.interpolation_mask_area
+
+		config_base::extract_toml_value(config, "filters.filters", settings.filters, DEFAULT_CONFIG.filters);
+		config_base::extract_toml_value(config, "filters.brightness", settings.brightness, DEFAULT_CONFIG.brightness);
+		config_base::extract_toml_value(config, "filters.saturation", settings.saturation, DEFAULT_CONFIG.saturation);
+		config_base::extract_toml_value(config, "filters.contrast", settings.contrast, DEFAULT_CONFIG.contrast);
+
+		config_base::extract_toml_value(
+			config, "advanced.advanced", settings.override_advanced, DEFAULT_CONFIG.override_advanced
 		);
-#ifndef __APPLE__ // rife issue again
-		config_base::extract_config_string(config_map, "rife model", settings.advanced.rife_model);
+
+		if (settings.override_advanced) {
+			config_base::extract_toml_value(
+				config,
+				"advanced.deduplication.deduplicate_range",
+				settings.advanced.deduplicate_range,
+				DEFAULT_CONFIG.advanced.deduplicate_range
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.deduplication.deduplicate_threshold",
+				settings.advanced.deduplicate_threshold,
+				DEFAULT_CONFIG.advanced.deduplicate_threshold
+			);
+
+			config_base::extract_toml_value(
+				config,
+				"advanced.rendering.video_container",
+				settings.advanced.video_container,
+				DEFAULT_CONFIG.advanced.video_container
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.rendering.custom_ffmpeg_filters",
+				settings.advanced.ffmpeg_override,
+				DEFAULT_CONFIG.advanced.ffmpeg_override
+			);
+			config_base::extract_toml_value(
+				config, "advanced.rendering.debug", settings.advanced.debug, DEFAULT_CONFIG.advanced.debug
+			);
+
+			config_base::extract_toml_value(
+				config,
+				"advanced.blur.blur_weighting_gaussian_std_dev",
+				settings.advanced.blur_weighting_gaussian_std_dev,
+				DEFAULT_CONFIG.advanced.blur_weighting_gaussian_std_dev
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.blur.blur_weighting_gaussian_mean",
+				settings.advanced.blur_weighting_gaussian_mean,
+				DEFAULT_CONFIG.advanced.blur_weighting_gaussian_mean
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.blur.blur_weighting_gaussian_bound",
+				settings.advanced.blur_weighting_gaussian_bound,
+				DEFAULT_CONFIG.advanced.blur_weighting_gaussian_bound
+			);
+
+			config_base::extract_toml_value(
+				config,
+				"advanced.interpolation.svp_interpolation_preset",
+				settings.advanced.svp_interpolation_preset,
+				DEFAULT_CONFIG.advanced.svp_interpolation_preset
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.interpolation.svp_interpolation_algorithm",
+				settings.advanced.svp_interpolation_algorithm,
+				DEFAULT_CONFIG.advanced.svp_interpolation_algorithm
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.interpolation.interpolation_block_size",
+				settings.advanced.interpolation_blocksize,
+				DEFAULT_CONFIG.advanced.interpolation_blocksize
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.interpolation.interpolation_mask_area",
+				settings.advanced.interpolation_mask_area,
+				DEFAULT_CONFIG.advanced.interpolation_mask_area
+			);
+#ifndef __APPLE__
+			config_base::extract_toml_value(
+				config,
+				"advanced.interpolation.rife_model",
+				settings.advanced.rife_model,
+				DEFAULT_CONFIG.advanced.rife_model
+			);
 #endif
-		config_base::extract_config_value(config_map, "manual svp", settings.advanced.manual_svp);
-		config_base::extract_config_string(config_map, "super string", settings.advanced.super_string);
-		config_base::extract_config_string(config_map, "vectors string", settings.advanced.vectors_string);
-		config_base::extract_config_string(config_map, "smooth string", settings.advanced.smooth_string);
+			config_base::extract_toml_value(
+				config, "advanced.svp.manual_svp", settings.advanced.manual_svp, DEFAULT_CONFIG.advanced.manual_svp
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.svp.super_string",
+				settings.advanced.super_string,
+				DEFAULT_CONFIG.advanced.super_string
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.svp.vectors_string",
+				settings.advanced.vectors_string,
+				DEFAULT_CONFIG.advanced.vectors_string
+			);
+			config_base::extract_toml_value(
+				config,
+				"advanced.svp.smooth_string",
+				settings.advanced.smooth_string,
+				DEFAULT_CONFIG.advanced.smooth_string
+			);
+		}
+
+		config_base::extract_toml_value(
+			config,
+			"gui.blur_amount_tied_to_fps",
+			settings.blur_amount_tied_to_fps,
+			DEFAULT_CONFIG.blur_amount_tied_to_fps
+		);
+	}
+	catch (const toml::parse_error& err) {
+		DEBUG_LOG("Error parsing TOML config file at %s: %s", config_filepath.string().c_str(), err.what());
+		return BlurSettings(); // Return default settings on parse error
 	}
 
-	config_base::extract_config_value(config_map, "blur amount tied to fps", settings.blur_amount_tied_to_fps);
-
-	// recreate the config file using the parsed values (keeps nice formatting)
+	// Recreate the config file using the parsed values (keeps nice formatting)
 	create(config_filepath, settings);
 
 	return settings;

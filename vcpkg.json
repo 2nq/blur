@@ -44,6 +44,7 @@
         "jpeg"
       ]
     },
-    "tl-expected"
+    "tl-expected",
+    "tomlplusplus"
   ]
 }

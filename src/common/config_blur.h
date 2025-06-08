@@ -84,6 +84,7 @@ public:
 };
 
 namespace config_blur {
+	inline const std::string CONFIG_FILENAME = "blur.toml";
 	inline const BlurSettings DEFAULT_CONFIG;
 
 	inline const std::vector<std::string> SVP_INTERPOLATION_PRESETS = {
@@ -95,8 +96,6 @@ namespace config_blur {
 	};
 
 	inline const std::vector<std::string> INTERPOLATION_BLOCK_SIZES = { "4", "8", "16", "32" };
-
-	const std::string CONFIG_FILENAME = ".blur-config.cfg";
 
 	void create(const std::filesystem::path& filepath, const BlurSettings& current_settings = BlurSettings());
 

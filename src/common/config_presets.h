@@ -49,9 +49,8 @@ struct PresetSettings {
 		}
 	};
 
-	[[nodiscard]] const std::string* find_preset_params(
-		const std::string& gpu_type, const std::string& preset_name
-	) const {
+	[[nodiscard]] const std::string* find_preset_params(const std::string& gpu_type, const std::string& preset_name)
+		const {
 		for (const auto& [type, codec_params] : presets) {
 			if (type == gpu_type) {
 				for (const auto& [codec, params] : codec_params) {
@@ -73,14 +72,18 @@ struct PresetSettings {
 		}
 		return nullptr;
 	}
+
+	bool operator==(const PresetSettings& other) const = default;
 };
 
 namespace config_presets {
 	inline const PresetSettings DEFAULT_CONFIG;
 
-	const std::string PRESET_CONFIG_FILENAME = "presets.cfg";
+	const std::string PRESET_CONFIG_FILENAME = "presets.toml";
 
 	void create(const std::filesystem::path& filepath, const PresetSettings& current_settings = PresetSettings());
+
+	tl::expected<void, std::string> validate(PresetSettings& config, bool fix);
 
 	PresetSettings parse(const std::filesystem::path& config_filepath);
 

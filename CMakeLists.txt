@@ -31,6 +31,9 @@ find_package(Freetype REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 find_package(tl-expected CONFIG REQUIRED)
+find_package(PkgConfig REQUIRED)
+# pkg-config required for a vcpkg module, really guys?
+pkg_check_modules(tomlplusplus REQUIRED IMPORTED_TARGET tomlplusplus)
 
 # source files
 file(GLOB_RECURSE COMMON_SOURCES "src/common/*.cpp")
@@ -61,8 +64,14 @@ file(GLOB_RECURSE RESOURCES "resources/*")
 function(setup_target target)
   target_include_directories(${target} PRIVATE src)
   target_link_libraries(
-    ${target} PRIVATE nlohmann_json::nlohmann_json cpr::cpr Boost::system
-                      Boost::filesystem Threads::Threads tl::expected)
+    ${target}
+    PRIVATE nlohmann_json::nlohmann_json
+            cpr::cpr
+            Boost::system
+            Boost::filesystem
+            Threads::Threads
+            tl::expected
+            PkgConfig::tomlplusplus)
   target_compile_definitions(${target} PRIVATE NOMINMAX BOOST_FILESYSTEM_NO_LIB
                                                BOOST_FILESYSTEM_STATIC_LINK=1)
   if(WIN32)
@@ -190,7 +199,6 @@ if(APPLE)
     # The VERBATIM flag ensures command arguments are correctly escaped
     VERBATIM)
 elseif(UNIX)
-  find_package(PkgConfig REQUIRED)
   pkg_check_modules(Systemd IMPORTED_TARGET GLOBAL libsystemd>=239)
 
   find_package(sdbus-c++ REQUIRED)
