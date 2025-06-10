@@ -59,7 +59,9 @@ struct BlurSettings {
 	bool detailed_filenames = false;
 	bool copy_dates = false;
 
-	bool gpu_decoding = true;
+	bool gpu_decoding =
+		true; // NOTE! TODO:! i've force-disabled this in the vapoursynth script for now and removed the gui option
+	          // since it causes issues, but am keeping it in the cfg so if it gets fixed i can restore it
 	bool gpu_interpolation = true;
 	bool gpu_encoding = false;
 	std::string gpu_type;

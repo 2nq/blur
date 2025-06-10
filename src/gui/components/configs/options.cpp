@@ -310,7 +310,9 @@ void configs::options(ui::Container& container, BlurSettings& settings) {
 	*/
 	section_component("gpu acceleration");
 
-	ui::add_checkbox("gpu decoding checkbox", container, "gpu decoding", settings.gpu_decoding, fonts::dejavu);
+	// ui::add_checkbox("gpu decoding checkbox", container, "gpu decoding", settings.gpu_decoding, fonts::dejavu); //
+	// NOTE! TODO:! i've force-disabled this in the vapoursynth script for now and removed the gui option since it
+	// causes issues, but am keeping it in the cfg so if it gets fixed i can restore it
 
 	ui::add_checkbox(
 		"gpu interpolation checkbox", container, "gpu interpolation", settings.gpu_interpolation, fonts::dejavu
