@@ -37,7 +37,7 @@ PresetSettings config_presets::parse(const std::filesystem::path& config_filepat
 	std::istringstream stream(content);
 	std::string line;
 	std::string current_gpu_type;
-	PresetSettings::CodecParams* current_codec_params = nullptr;
+	std::vector<PresetSettings::CodecParams>* current_codec_params = nullptr;
 
 	while (std::getline(stream, line)) {
 		line = u::trim(line);
@@ -46,46 +46,50 @@ PresetSettings config_presets::parse(const std::filesystem::path& config_filepat
 			continue;
 		}
 
+		// gpu type header
 		if (line.front() == '-') {
 			current_gpu_type = u::trim(line.substr(1));
 
-			current_codec_params = nullptr;
-			for (auto& [gpu_name, params] : settings.presets) {
-				if (gpu_name == current_gpu_type) {
-					current_codec_params = &params;
+			for (auto& presets : settings.presets) {
+				if (presets.type == current_gpu_type) {
+					current_codec_params = &presets.codec_params;
 					break;
 				}
 			}
 
 			// new gpu type
 			if (!current_codec_params) {
-				settings.presets.push_back({ current_gpu_type, {} });
-				current_codec_params = &settings.presets.back().second;
+				current_codec_params =
+					&settings.presets
+						 .emplace_back(PresetSettings::PresetCodecs{ .type = current_gpu_type, .codec_params = {} })
+						 .codec_params;
 			}
 
 			continue;
 		}
 
+		// preset entry
 		size_t delimiter_pos = line.find(':');
 		if (delimiter_pos != std::string::npos && current_codec_params) {
 			std::string preset_name = u::trim(line.substr(0, delimiter_pos));
 			std::string preset_params = u::trim(line.substr(delimiter_pos + 1));
 
-			bool found = false;
-			for (auto& [name, params] : *current_codec_params) {
-				if (name == preset_name) {
-					params = preset_params; // already exists - update
-					found = true;
-					break;
+			if (current_codec_params) {
+				for (auto& [name, params] : *current_codec_params) {
+					if (name == preset_name) {
+						params = preset_params; // already exists - update
+						break;
+					}
 				}
 			}
-
-			// new preset
-			if (!found) {
+			else {
+				// new preset
 				current_codec_params->emplace_back(preset_name, preset_params);
 			}
 		}
 	}
+
+	settings.migrate();
 
 	// recreate the config file
 	create(config_filepath, settings);
