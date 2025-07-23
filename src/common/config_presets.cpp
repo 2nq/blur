@@ -238,7 +238,7 @@ config_presets::QualityConfig config_presets::get_quality_config(const std::wstr
 		// Mac VideoToolbox H264/H265/AV1
 		config.min_quality = 0;
 		config.max_quality = 100;
-		config.quality_label = "(0: best, 50: balanced, 100: worst)";
+		config.quality_label = "(100: best, 0: worst)"; // todo: add balanced when i know what a good value is
 	}
 	else if (codec == L"prores_videotoolbox") {
 		// Mac ProRes
