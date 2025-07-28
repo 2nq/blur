@@ -176,51 +176,54 @@ tl::expected<RenderCommands, std::string> Render::build_render_commands() {
 #endif
 
 	// Build vspipe command
-	commands.vspipe = { L"-p",
-		                L"-c",
-		                L"y4m",
-		                L"-a",
-		                L"video_path=" + path_string,
-		                L"-a",
-		                std::format(L"fps_num={}", m_video_info.fps_num),
-		                L"-a",
-		                std::format(L"fps_den={}", m_video_info.fps_den),
-		                L"-a",
-		                L"color_range=" +
-		                    (m_video_info.color_range ? u::towstring(*m_video_info.color_range) : L"undefined"),
-		                L"-a",
-		                L"settings=" + u::towstring(settings_json->dump()),
+	commands.vspipe = {
+		L"-p",
+		L"-c",
+		L"y4m",
+		L"-a",
+		L"video_path=" + path_string,
+		L"-a",
+		std::format(L"fps_num={}", m_video_info.fps_num),
+		L"-a",
+		std::format(L"fps_den={}", m_video_info.fps_den),
+		L"-a",
+		L"color_range=" + (m_video_info.color_range ? u::towstring(*m_video_info.color_range) : L"undefined"),
+		L"-a",
+		L"settings=" + u::towstring(settings_json->dump()),
 #if defined(__APPLE__)
-		                L"-a",
-		                std::format(L"macos_bundled={}", blur.used_installer ? L"true" : L"false"),
+		L"-a",
+		std::format(L"macos_bundled={}", blur.used_installer ? L"true" : L"false"),
 #endif
 #if defined(_WIN32)
-		                L"-a",
-		                L"enable_lsmash=true",
+		L"-a",
+		L"enable_lsmash=true",
 #endif
 #if defined(__linux__)
-		                L"-a",
-		                std::format(L"linux_bundled={}", vapoursynth_plugins_bundled ? L"true" : L"false"),
+		L"-a",
+		std::format(L"linux_bundled={}", vapoursynth_plugins_bundled ? L"true" : L"false"),
 #endif
-		                blur_script_path,
-		                L"-" };
+		blur_script_path,
+		L"-",
+	};
 
 	// Build ffmpeg command
-	commands.ffmpeg = { L"-loglevel",
-		                L"error",
-		                L"-hide_banner",
-		                L"-stats",
-		                L"-y",
-		                L"-i",
-		                L"-", // piped output from video script
-		                L"-fflags",
-		                L"+genpts",
-		                L"-i",
-		                m_video_path.wstring(), // original video (for audio)
-		                L"-map",
-		                L"0:v",
-		                L"-map",
-		                L"1:a?" };
+	commands.ffmpeg = {
+		L"-loglevel",
+		L"error",
+		L"-hide_banner",
+		L"-stats",
+		L"-y",
+		L"-i",
+		L"-", // piped output from video script
+		L"-fflags",
+		L"+genpts",
+		L"-i",
+		m_video_path.wstring(), // original video (for audio)
+		L"-map",
+		L"0:v",
+		L"-map",
+		L"1:a?",
+	};
 
 	// handle colour metadata tagging
 	// (vspipe strips this input info, need to define it manually so ffmpeg knows about it)
