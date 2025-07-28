@@ -57,30 +57,27 @@ def with_format(
     orig_format = video.format
     needs_conversion = orig_format.id != target_format
 
+    matrix = video.get_frame(0).props.get("_Matrix", None)
+    transfer = video.get_frame(0).props.get("_Transfer", None)
+    primaries = video.get_frame(0).props.get("_Primaries", None)
+    # color_range = video.get_frame(0).props.get("_ColorRange", None)
+
     if needs_conversion:
-        convert_kwargs = {
-            "format": target_format,
-            "range_in": is_full_color_range,
-            "range": is_full_color_range,
-        }
-
-        if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
-            convert_kwargs["matrix_in_s"] = "709"
-
-        video = core.resize.Point(video, **convert_kwargs)
+        video = core.resize.Point(
+            video,
+            format=target_format,
+            range=is_full_color_range,
+        )
 
     video = process_func(video)
 
     if needs_conversion:
-        convert_back_kwargs = {
-            "format": orig_format.id,
-            "range_in": is_full_color_range,
-            "range": is_full_color_range,
-        }
-
-        if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
-            convert_back_kwargs["matrix_s"] = "709"
-
-        video = core.resize.Point(video, **convert_back_kwargs)
-
+        video = core.resize.Point(
+            video,
+            format=orig_format.id,
+            range=is_full_color_range,
+            matrix=matrix,
+            transfer=transfer,
+            primaries=primaries,
+        )
     return video
