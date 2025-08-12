@@ -4,7 +4,7 @@
 #include "config_blur.h"
 
 const std::string APPLICATION_NAME = "blur";
-const std::string BLUR_VERSION = "2.35";
+const std::string BLUR_VERSION = "2.36";
 
 class Blur { // todo: switch all the classes which could be namespaces into namespaces
 public:
