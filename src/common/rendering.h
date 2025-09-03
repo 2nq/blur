@@ -256,7 +256,7 @@ namespace rendering {
 			stop();
 
 			std::lock_guard lock(m_mutex);
-			if (is_empty())
+			if (m_queue.empty())
 				return;
 
 			// still rendering the video at the front, so tell it to stop
