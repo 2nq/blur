@@ -224,12 +224,18 @@ void main::render_pending(ui::Container& container, const std::vector<std::share
 		FONT_CENTERED_X | FONT_OUTLINE
 	);
 
-	std::vector<std::filesystem::path> video_paths;
+	std::vector<ui::UIVideo> ui_videos;
+
 	for (const auto& pv : pending) {
-		video_paths.push_back(pv->video_path);
+		ui_videos.push_back(
+			{
+				.path = pv->video_path,
+				.video_info = pv->video_info,
+			}
+		);
 	}
 
-	ui::add_videos("test video", container, video_paths, pending_index, pending_video->start, pending_video->end);
+	ui::add_videos("test video", container, ui_videos, pending_index, pending_video->start, pending_video->end);
 }
 
 void main::render_home(ui::Container& container) {

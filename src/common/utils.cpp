@@ -144,15 +144,6 @@ std::string u::get_executable_path() {
 
 // NOLINTEND
 
-float u::lerp(float value, float target, float reset_speed, float snap_offset) {
-	value = std::lerp(value, target, reset_speed);
-
-	if (std::abs(value - target) < snap_offset) // todo: is this too small
-		value = target;
-
-	return value;
-}
-
 constexpr int64_t PERIOD = 1;
 constexpr int64_t TOLERANCE = 1'020'000;
 constexpr int64_t MAX_TICKS = PERIOD * 9'500;

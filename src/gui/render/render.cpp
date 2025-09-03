@@ -663,7 +663,10 @@ void render::waveform(
 	const gfx::Rect& active_rect,
 	const gfx::Color& color,
 	const std::vector<int16_t>& samples,
-	bool filled
+	int16_t max_sample,
+	bool filled,
+	float zoom_start,
+	float zoom_end
 ) {
 	if (samples.empty())
 		return;
@@ -671,18 +674,40 @@ void render::waveform(
 	const size_t width = rect.w;
 	const size_t height = rect.h;
 
-	// Find max amplitude to normalize waveform
-	int16_t max_sample = 1;
-	for (auto s : samples) {
-		max_sample = std::max<int>(std::abs(s), max_sample);
-	}
+	// Clamp zoom values
+	zoom_start = std::clamp(zoom_start, 0.0f, 1.0f);
+	zoom_end = std::clamp(zoom_end, 0.0f, 1.0f);
+
+	if (zoom_start >= zoom_end)
+		return;
+
+	// Calculate which portion of the waveform samples to use
+	size_t total_samples = samples.size();
+	size_t start_sample = static_cast<size_t>(zoom_start * total_samples);
+	size_t end_sample = static_cast<size_t>(zoom_end * total_samples);
+	end_sample = std::min(end_sample, total_samples);
+
+	if (start_sample >= end_sample)
+		return;
+
+	size_t zoomed_sample_count = end_sample - start_sample;
 
 	for (size_t x = 0; x < width; ++x) {
-		// Map pixel x to corresponding sample index
-		float sample_pos = static_cast<float>(x) / width * samples.size();
-		auto idx_start = static_cast<size_t>(sample_pos);
+		// Map pixel x to corresponding sample index within the zoomed range
+		float sample_pos = static_cast<float>(x) / width * zoomed_sample_count;
+		size_t idx_start = start_sample + static_cast<size_t>(sample_pos);
 		size_t idx_end =
-			std::min(static_cast<size_t>(sample_pos + (samples.size() / static_cast<float>(width))), samples.size());
+			start_sample +
+			std::min(
+				static_cast<size_t>(sample_pos + (zoomed_sample_count / static_cast<float>(width))), zoomed_sample_count
+			);
+
+		// Ensure we don't go beyond our sample bounds
+		idx_start = std::min(idx_start, end_sample - 1);
+		idx_end = std::min(idx_end, end_sample);
+
+		if (idx_start >= idx_end)
+			continue;
 
 		// Take max amplitude in this range
 		int16_t max_amp = 0;

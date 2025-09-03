@@ -350,10 +350,6 @@ std::optional<float> VideoPlayer::get_percent_pos() const {
 	return get_property<double>("percent-pos", MPV_FORMAT_DOUBLE);
 }
 
-std::optional<float> VideoPlayer::get_duration() const {
-	return get_property<double>("duration", MPV_FORMAT_DOUBLE);
-}
-
 bool VideoPlayer::is_video_ready() const {
 	return m_video_loaded;
 }

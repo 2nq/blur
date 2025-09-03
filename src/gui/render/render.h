@@ -241,7 +241,10 @@ namespace render {
 		const gfx::Rect& active_rect,
 		const gfx::Color& color,
 		const std::vector<int16_t>& samples,
-		bool filled = true
+		int16_t max_sample,
+		bool filled,
+		float zoom_start = 0.0f,
+		float zoom_end = 1.0f
 	);
 
 	enum class RectSide {

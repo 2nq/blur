@@ -47,10 +47,13 @@ public:
 
 	[[nodiscard]] std::optional<std::pair<int, int>> get_video_dimensions() const;
 	[[nodiscard]] std::optional<float> get_percent_pos() const;
-	[[nodiscard]] std::optional<float> get_duration() const;
 
 	[[nodiscard]] std::optional<bool> get_paused() const {
 		return get_property<bool>("pause", MPV_FORMAT_FLAG);
+	}
+
+	[[nodiscard]] std::optional<double> get_duration() const {
+		return get_property<double>("duration/full", MPV_FORMAT_DOUBLE);
 	}
 
 	[[nodiscard]] bool is_video_ready() const;

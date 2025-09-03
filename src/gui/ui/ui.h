@@ -131,25 +131,38 @@ namespace ui {
 		}
 	};
 
+	struct UIVideo {
+		std::filesystem::path path;
+		std::optional<u::VideoInfo> video_info;
+	};
+
 	struct VideoElementData {
+		struct StoredWaveform {
+			std::vector<int16_t> samples;
+			int16_t max_sample = 0;
+		};
+
 		struct Video {
 			std::filesystem::path path;
-			std::shared_ptr<VideoPlayer> player;
 			gfx::Size size;
-			std::vector<int16_t>* waveform;
+			std::optional<u::VideoInfo> video_info;
+			std::shared_ptr<VideoPlayer> player;
+			std::optional<double> duration;
+			std::optional<StoredWaveform*> waveform;
 
-			bool operator==(const Video& other) const = default;
+			bool operator==(const Video& other) const {
+				return path == other.path && size == other.size && player == other.player &&
+				       duration == other.duration && waveform == other.waveform;
+			}
 		};
 
 		std::vector<Video> videos;
-		gfx::Size active_video_size;
 		size_t* index;
 		float* start;
 		float* end;
 
 		bool operator==(const VideoElementData& other) const {
-			return videos == other.videos && active_video_size == other.active_video_size && index == other.index &&
-			       start == other.start && end == other.end;
+			return videos == other.videos && index == other.index && start == other.start && end == other.end;
 		}
 	};
 
@@ -567,7 +580,7 @@ namespace ui {
 	std::optional<AnimatedElement*> add_videos(
 		const std::string& id,
 		Container& container,
-		const std::vector<std::filesystem::path>& video_paths,
+		const std::vector<UIVideo>& ui_videos,
 		size_t& index,
 		float& start,
 		float& end

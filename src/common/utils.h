@@ -429,9 +429,17 @@ namespace u {
 
 	std::string get_executable_path();
 
-	float lerp(
-		float value, float target, float speed, float snap_offset = 0.01f
-	); // if animations are jumping at the end then lower snap offset. todo: maybe dynamically generate it somehow
+	template<typename T>
+	T lerp(
+		T value, T target, T reset_speed, T snap_offset = 0.01f
+	) { // if animations are jumping at the end then lower snap offset. todo: maybe dynamically generate it somehow
+		value = std::lerp(value, target, reset_speed);
+
+		if (std::abs(value - target) < snap_offset) // todo: is this too small
+			value = target;
+
+		return value;
+	}
 
 	void sleep(double seconds); // https://blog.bearcats.nl/perfect-sleep-function/ kill windows
 

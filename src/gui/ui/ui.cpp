@@ -127,6 +127,11 @@ ui::AnimatedElement* ui::add_element(
 	_element.orig_rect = _element.rect;
 
 	if (animated_element.element) {
+		// add new animations
+		for (const auto& [animation_key, animation] : animations) {
+			animated_element.animations.emplace(animation_key, animation);
+		}
+
 		if (animated_element.element->update(_element)) {
 			container.updated = true;
 		}
@@ -372,7 +377,7 @@ bool ui::update_container_frame(Container& container, float delta_time) {
 				container.scroll_speed_y =
 					u::lerp(container.scroll_speed_y, 0.f, scroll_speed_overscroll_reset_speed * delta_time);
 				container.scroll_y =
-					u::lerp(container.scroll_y, max_scroll, scroll_overscroll_reset_speed * delta_time);
+					u::lerp(container.scroll_y, (float)max_scroll, scroll_overscroll_reset_speed * delta_time);
 			}
 
 			if (container.scroll_speed_y != 0.f) {
