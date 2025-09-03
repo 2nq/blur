@@ -303,20 +303,20 @@ bool ui::update_container_input(Container& container) {
 	hovered_id = hovered_element_internal ? hovered_element_internal->element->id : "";
 
 	// scroll
-	if (keys::scroll_delta != 0.f || keys::scroll_delta_precise != 0.f) {
+	if (keys::scroll_delta != 0.f) { // || keys::scroll_delta_precise != 0.f) {
 		if (container.rect.contains(keys::mouse_pos)) {
 			if (can_scroll(container)) {
-				container.scroll_speed_y += keys::scroll_delta;
+				container.scroll_speed_y += keys::scroll_delta * 1500.f;
 				keys::scroll_delta = 0.f;
 
-				if (keys::scroll_delta_precise != 0.f) {
-					container.scroll_y += keys::scroll_delta_precise;
-					keys::scroll_delta_precise = 0.f;
+				// if (keys::scroll_delta_precise != 0.f) {
+				// 	container.scroll_y += keys::scroll_delta_precise;
+				// 	keys::scroll_delta_precise = 0.f;
 
-					// immediately clamp to edges todo: overscroll with trackpad?
-					int max_scroll = get_max_scroll(container);
-					container.scroll_y = std::clamp(container.scroll_y, 0.f, (float)max_scroll);
-				}
+				// 	// immediately clamp to edges todo: overscroll with trackpad?
+				// 	int max_scroll = get_max_scroll(container);
+				// 	container.scroll_y = std::clamp(container.scroll_y, 0.f, (float)max_scroll);
+				// }
 
 				updated |=
 					true; // if != 0 checks imply that scroll speed changed, no need to explicitly check if it has
@@ -334,7 +334,8 @@ void ui::on_update_input_start() {
 void ui::on_update_input_end() {
 	// reset scroll, shouldn't scroll stuff on a later update
 	keys::scroll_delta = 0.f;
-	keys::scroll_delta_precise = 0.f;
+	keys::scroll_x_delta = 0.f;
+	// keys::scroll_delta_precise = 0.f;
 
 	// empty text events if they werent processed for some reason
 	text_event_queue.clear();

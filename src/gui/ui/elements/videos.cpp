@@ -572,15 +572,68 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 		updated |= grab.active;
 	}
 
-	// Zooming with new start/end system
+	auto& progress_anim = element.animations.at(ui::hasher("progress"));
+	auto& seeking_anim = element.animations.at(ui::hasher("seeking"));
+	auto& seek_anim = element.animations.at(ui::hasher("seek"));
+
+	bool hovered = !updated && rect.contains(keys::mouse_pos) && set_hovered_element(element);
+	bool active = ui::get_active_element() == &element;
+
+	std::string pan_action = "video_pan";
+
+	if (hovered) {
+		if (keys::is_mouse_down(SDL_BUTTON_RIGHT)) {
+			// mark pan active
+			if (!ui::get_active_element()) {
+				set_active_element(element, pan_action);
+
+				// initialize last pan position if not present
+				g_last_pan_x[element.element->id] = keys::mouse_pos.x;
+			}
+		}
+		else if (keys::is_mouse_down()) {
+			set_active_element(element, "video track");
+		}
+	}
+
+	auto apply_pan = [&](float timeline_delta) {
+		float new_start = track_zoom_start_anim.goal - timeline_delta;
+		float new_end = track_zoom_end_anim.goal - timeline_delta;
+
+		// Clamp to valid bounds
+		if (new_start < 0.f) {
+			float offset = -new_start;
+			new_start = 0.f;
+			new_end += offset;
+		}
+		if (new_end > (*active_video->duration)) {
+			float offset = new_end - (*active_video->duration);
+			new_end = (*active_video->duration);
+			new_start -= offset;
+		}
+
+		track_zoom_start_anim.set_goal(new_start);
+		track_zoom_end_anim.set_goal(new_end);
+		updated = true;
+	};
+
 	if (rect.contains(keys::mouse_pos)) {
+		// panning (with horizontal scroll)
+		if (keys::scroll_x_delta != 0.f) {
+			float timeline_delta = (keys::scroll_x_delta / 30.f) * zoom_range;
+			apply_pan(timeline_delta);
+
+			keys::scroll_x_delta = 0.f;
+		}
+
+		// zooming
 		if (keys::scroll_delta != 0.f) {
 			float current_start = track_zoom_start_anim.goal;
 			float current_end = track_zoom_end_anim.goal;
 			float current_range = current_end - current_start;
 
 			// Calculate zoom factor (positive = zoom in, negative = zoom out)
-			float zoom_factor = keys::scroll_delta / 10000.f; // Adjust sensitivity as needed
+			float zoom_factor = keys::scroll_delta;
 			float new_range = std::clamp(
 				current_range * (1.f - zoom_factor),
 				TRACK_MAX_ZOOM_SECS, // confusing, since min = max
@@ -614,35 +667,12 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			track_zoom_end_anim.set_goal(new_end);
 
 			updated = true;
+
+			keys::scroll_delta = 0.f;
 		}
 	}
 
-	auto& progress_anim = element.animations.at(ui::hasher("progress"));
-	auto& seeking_anim = element.animations.at(ui::hasher("seeking"));
-	auto& seek_anim = element.animations.at(ui::hasher("seek"));
-
-	bool hovered = !updated && rect.contains(keys::mouse_pos) && set_hovered_element(element);
-	bool active = ui::get_active_element() == &element;
-
-	// Panning: right + drag
-	std::string pan_action = "video_pan";
-
-	if (hovered) {
-		if (keys::is_mouse_down(SDL_BUTTON_RIGHT)) {
-			// mark pan active
-			if (!ui::get_active_element()) {
-				set_active_element(element, pan_action);
-
-				// initialize last pan position if not present
-				g_last_pan_x[element.element->id] = keys::mouse_pos.x;
-			}
-		}
-		else if (keys::is_mouse_down()) {
-			set_active_element(element, "video track");
-		}
-	}
-
-	// Handle active pan action with new start/end system
+	// panning (with right click)
 	if (is_active_element(element, pan_action)) {
 		if (keys::is_mouse_down(SDL_BUTTON_RIGHT)) {
 			int last_x = g_last_pan_x[element.element->id];
@@ -652,35 +682,15 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 
 			// Convert pixel delta to timeline delta
 			float timeline_delta = ((float)dx / rect.w) * zoom_range;
-
-			float new_start = track_zoom_start_anim.goal - timeline_delta;
-			float new_end = track_zoom_end_anim.goal - timeline_delta;
-
-			// Clamp to valid bounds
-			if (new_start < 0.f) {
-				float offset = -new_start;
-				new_start = 0.f;
-				new_end += offset;
-			}
-			if (new_end > (*active_video->duration)) {
-				float offset = new_end - (*active_video->duration);
-				new_end = (*active_video->duration);
-				new_start -= offset;
-			}
-
-			track_zoom_start_anim.set_goal(new_start);
-			track_zoom_end_anim.set_goal(new_end);
-
-			updated = true;
+			apply_pan(timeline_delta);
 		}
 		else {
 			ui::reset_active_element();
-			// optionally clear stored last pan pos
 			g_last_pan_x.erase(element.element->id);
 		}
 	}
 
-	// Seek by clicking/dragging when not panning and not grabbing
+	// seeking
 	if (is_active_element(element, "video track")) {
 		if (keys::is_mouse_down()) {
 			seeking_anim.set_goal(1.f);
