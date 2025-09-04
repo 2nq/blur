@@ -16,7 +16,6 @@ namespace rendering {
 		bool stopped = false;
 	};
 
-	// -- forward declarations
 	struct RenderState;
 
 	namespace detail {
@@ -29,6 +28,7 @@ namespace rendering {
 			RenderCommands commands,
 			const std::shared_ptr<RenderState>& state,
 			bool debug,
+			bool audio,
 			const std::function<void()>& progress_callback
 		);
 
@@ -101,6 +101,7 @@ namespace rendering {
 			RenderCommands commands,
 			const std::shared_ptr<RenderState>& state,
 			bool debug,
+			bool audio,
 			const std::function<void()>& progress_callback
 		);
 
@@ -176,27 +177,7 @@ namespace rendering {
 			const BlurSettings& settings, const GlobalAppSettings& app_settings
 		);
 
-		void pause(int pid, const std::shared_ptr<RenderState>& state);
-		void resume(int pid, const std::shared_ptr<RenderState>& state);
-
-		tl::expected<PipelineResult, std::string> execute_pipeline(
-			RenderCommands commands,
-			const std::shared_ptr<RenderState>& state,
-			bool debug,
-			const std::function<void()>& progress_callback
-		);
-
 		void copy_file_timestamp(const std::filesystem::path& from, const std::filesystem::path& to);
-
-		tl::expected<RenderResult, std::string> render_video(
-			const std::filesystem::path& input_path,
-			const u::VideoInfo& video_info,
-			const BlurSettings& settings,
-			const std::shared_ptr<RenderState>& state,
-			const GlobalAppSettings& app_settings = config_app::get_app_config(),
-			const std::optional<std::filesystem::path>& output_path_override = {},
-			const std::function<void()>& progress_callback = {}
-		);
 	}
 
 	struct QueueAddRes {
