@@ -33,7 +33,7 @@ void VideoPlayer::handle_key_press(SDL_Keycode key) {
 }
 
 void VideoPlayer::load_file(const std::filesystem::path& file_path) {
-	run_command_async({ "loadfile", file_path });
+	run_command_async({ "loadfile", u::path_to_string(file_path) });
 
 	m_video_loaded = false; // reset video loaded state
 }
