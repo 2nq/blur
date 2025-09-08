@@ -64,10 +64,15 @@ else:
         fpsden=fps_den if fps_den != -1 else None,
     )
 
-audio = core.bs.AudioSource(
-    source=video_path,
-    cachemode=0,
-)
+try:
+    audio = core.bs.AudioSource(
+        source=video_path,
+        cachemode=0,
+    )
+except Exception as e:
+    print("failed to load audio", e)
+    audio = core.std.BlankAudio(samplerate=44100, length=44100*video.num_frames)
+
 
 # input timescale
 if settings["timescale"]:
@@ -297,6 +302,7 @@ end = max(0.0, min(1.0, end))
 # trim video and audio
 v_start = 0
 v_end = None
+
 a_start = 0
 a_end = None
 
@@ -308,6 +314,7 @@ if start != 0:
     # TODO MR: make sure this is exactly synced
     time_start = v_start / fps
     a_start = int(time_start * audio.sample_rate)
+
 if end != 1:
     v_end = int(video.num_frames * end)
 
