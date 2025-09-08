@@ -96,8 +96,8 @@ function Download-ModelFiles {
 }
 
 # Download and install VapourSynth
-$vapoursynthInstallerUrl = "https://github.com/vapoursynth/vapoursynth/releases/download/R70/Install-Portable-VapourSynth-R70.ps1"
-$vapoursynthInstallerPath = Join-Path $vapoursynthDir "Install-Portable-VapourSynth-R70.ps1"
+$vapoursynthInstallerUrl = "https://github.com/vapoursynth/vapoursynth/releases/download/R72/Install-Portable-VapourSynth-R72.ps1"
+$vapoursynthInstallerPath = Join-Path $vapoursynthDir "Install-Portable-VapourSynth-R72.ps1"
 Download-File -Url $vapoursynthInstallerUrl -OutFile $vapoursynthInstallerPath
 
 # Run VapourSynth installer
