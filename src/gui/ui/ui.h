@@ -163,6 +163,7 @@ namespace ui {
 
 		// persistent
 		std::optional<std::filesystem::path> last_active_video;
+		std::optional<int> last_pan_x;
 
 		bool operator==(const VideoElementData& other) const {
 			return videos == other.videos && index == other.index && start == other.start && end == other.end;

@@ -319,9 +319,6 @@ namespace {
 	}
 }
 
-// small map to store last pan X while dragging per element id
-static std::unordered_map<std::string, int> g_last_pan_x;
-
 void ui::handle_videos_event(const SDL_Event& event, bool& to_render) {
 	for (auto& [id, player] : video_players) {
 		if (player->is_focused_player() || !player->is_video_ready()) {
@@ -507,7 +504,7 @@ void ui::render_videos(const Container& container, const AnimatedElement& elemen
 }
 
 bool update_track(const ui::Container& container, ui::AnimatedElement& element) {
-	const auto& video_data = std::get<ui::VideoElementData>(element.element->data);
+	auto& video_data = std::get<ui::VideoElementData>(element.element->data);
 
 	const auto* active_video = get_active_video(element);
 	if (!active_video || !active_video->duration)
@@ -619,23 +616,6 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	bool hovered = !updated && rect.contains(keys::mouse_pos) && set_hovered_element(element);
 	bool active = ui::get_active_element() == &element;
 
-	std::string pan_action = "video_pan";
-
-	if (hovered) {
-		if (keys::is_mouse_down(SDL_BUTTON_RIGHT)) {
-			// mark pan active
-			if (!ui::get_active_element()) {
-				set_active_element(element, pan_action);
-
-				// initialize last pan position if not present
-				g_last_pan_x[element.element->id] = keys::mouse_pos.x;
-			}
-		}
-		else if (keys::is_mouse_down()) {
-			set_active_element(element, "video track");
-		}
-	}
-
 	auto apply_pan = [&](float timeline_delta) {
 		float new_start = track_zoom_start_anim.goal - timeline_delta;
 		float new_end = track_zoom_end_anim.goal - timeline_delta;
@@ -657,6 +637,7 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 		updated = true;
 	};
 
+	// scroll actions
 	if (rect.contains(keys::mouse_pos)) {
 		// panning (with horizontal scroll)
 		if (keys::scroll_x_delta != 0.f) {
@@ -713,20 +694,38 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	}
 
 	// panning (with right click)
+	std::string pan_action = "video_pan";
+
+	if (hovered) {
+		if (keys::is_mouse_down(SDL_BUTTON_RIGHT)) {
+			// mark pan active
+			if (!ui::get_active_element()) {
+				set_active_element(element, pan_action);
+			}
+		}
+		else if (keys::is_mouse_down()) {
+			set_active_element(element, "video track");
+		}
+	}
+
 	if (is_active_element(element, pan_action)) {
 		if (keys::is_mouse_down(SDL_BUTTON_RIGHT)) {
-			int last_x = g_last_pan_x[element.element->id];
 			int cur_x = keys::mouse_pos.x;
-			int dx = cur_x - last_x;
-			g_last_pan_x[element.element->id] = cur_x;
 
-			// Convert pixel delta to timeline delta
-			float timeline_delta = ((float)dx / rect.w) * zoom_range;
-			apply_pan(timeline_delta);
+			if (video_data.last_pan_x) {
+				int last_x = *video_data.last_pan_x;
+				int dx = cur_x - last_x;
+
+				// convert pixel delta to timeline delta
+				float timeline_delta = ((float)dx / rect.w) * zoom_range;
+				apply_pan(timeline_delta);
+			}
+
+			video_data.last_pan_x = cur_x;
 		}
 		else {
 			ui::reset_active_element();
-			g_last_pan_x.erase(element.element->id);
+			video_data.last_pan_x = {};
 		}
 	}
 
