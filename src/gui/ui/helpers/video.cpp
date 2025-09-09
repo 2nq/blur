@@ -317,19 +317,10 @@ void VideoPlayer::process_mpv_events() {
 				m_video_loaded = false;
 				break;
 			}
-			case MPV_EVENT_COMMAND_REPLY: {
-				auto percent_pos = get_percent_pos();
-
-				if (percent_pos) {
-					auto old_start_percent = *percent_pos / 100.f;
-					if (old_start_percent < m_start_percent) {
-						seek(m_start_percent, true, false);
-					}
-				}
-			}
-			default:
+			default: {
 				u::log("MPV Event: {}", mpv_event_name(mp_event->event_id));
 				break;
+			}
 		}
 	}
 }

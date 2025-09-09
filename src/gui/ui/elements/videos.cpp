@@ -265,17 +265,34 @@ namespace {
 	}
 
 	void update_progress(ui::AnimatedElement& element) {
-		const auto& video_data = std::get<ui::VideoElementData>(element.element->data);
+		auto& video_data = std::get<ui::VideoElementData>(element.element->data);
+		if (video_data.grabbing)
+			return;
 
 		const auto* active_video = get_active_video(element);
 		if (!active_video || !active_video->player)
 			return;
 
 		auto& progress_anim = element.animations.at(ui::hasher("progress"));
+		
+		if (video_data.saved_percent != -1.f) {
+			auto progress_percent = active_video->player->get_percent_pos();
 
-		auto progress_percent = active_video->player->get_percent_pos();
-		if (progress_percent)
-			progress_anim.set_goal(*progress_percent / 100.f);
+			// wait for the mpv event to officially seek back to where we started after letting go,
+			// after that we can resume regular seeking
+			if (progress_percent && video_data.saved_percent == *progress_percent / 100.f) {
+				video_data.saved_percent = -1.f;
+				u::log("reached saved seek position");
+			}
+			else {
+				u::log("waiting for saved seek position to update");
+			}
+		}
+		else {
+			auto progress_percent = active_video->player->get_percent_pos();
+			if (progress_percent)
+				progress_anim.set_goal(*progress_percent / 100.f);	
+		}
 	}
 
 	void update_offset(ui::AnimatedElement& element) {
@@ -590,6 +607,13 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				grab.active = true;
 				grab.anim.set_goal(1.f);
 
+				// we just started the grab (grabbing will be set to true after the loop)
+				if (!video_data.grabbing) {
+					auto progress_percent = active_video->player->get_percent_pos();
+					if (progress_percent)
+						video_data.saved_percent = *progress_percent / 100.f;
+				}
+
 				// compute mouse percent in visible local coords then convert to global timeline percent
 				float local_mouse_percent =
 					(static_cast<float>(keys::mouse_pos.x - rect.x) / static_cast<float>(rect.w));
@@ -603,8 +627,14 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 
 				*grab.var_ptr = timeline_percent;
 				grab.update_fn(*active_video, timeline_percent);
+
+				active_video->player->seek(timeline_percent, true, false);
 			}
 			else {
+				// we just let go of the grab (grabbing will be set to false after the loop)
+				if (video_data.grabbing)
+					active_video->player->seek(video_data.saved_percent, true, false);
+
 				active_video->player->set_paused(true);
 				ui::reset_active_element();
 			}
@@ -615,6 +645,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 
 		updated |= grab.active;
 	}
+
+	video_data.grabbing = updated;
 
 	auto& progress_anim = element.animations.at(ui::hasher("progress"));
 	auto& seeking_anim = element.animations.at(ui::hasher("seeking"));
