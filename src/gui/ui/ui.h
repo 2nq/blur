@@ -160,6 +160,8 @@ namespace ui {
 		size_t* index;
 		float* start;
 		float* end;
+		float saved_percent;
+		bool grabbing;
 
 		bool operator==(const VideoElementData& other) const {
 			return videos == other.videos && index == other.index && start == other.start && end == other.end;
