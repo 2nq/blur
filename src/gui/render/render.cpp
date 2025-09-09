@@ -719,18 +719,31 @@ void render::waveform(
 
 			// Draw symmetric line above and below center
 			const int amplitude_height = static_cast<int>(peak_amplitude * scale);
-			const int y_top = y_center - amplitude_height;
-			const int y_bottom = y_center + amplitude_height;
 
-			const gfx::Point p1{ rect.x + x, y_top };
-			const gfx::Point p2{ rect.x + x, y_bottom };
+			if (amplitude_height > 0) {
+				const int y_top = y_center - amplitude_height;
+				const int y_bottom = y_center + amplitude_height;
 
-			auto line_color = color;
-			if (!active_rect.contains(p1) && !active_rect.contains(p2)) {
-				line_color = line_color.adjust_alpha(0.5f);
+				const gfx::Point p1{ rect.x + x, y_top };
+				const gfx::Point p2{ rect.x + x, y_bottom };
+
+				auto line_color = color;
+				if (!active_rect.contains(p1) && !active_rect.contains(p2)) {
+					line_color = line_color.adjust_alpha(0.5f);
+				}
+
+				line(p1, p2, line_color, true, 1.0f);
 			}
+			else {
+				gfx::Point point{ rect.x + x, y_center };
 
-			line(p1, p2, line_color, true, 1.0f);
+				auto point_color = color;
+				if (!active_rect.contains(point)) {
+					point_color = point_color.adjust_alpha(0.5f);
+				}
+
+				rect_filled(gfx::Rect(point, gfx::Size(1, 1)), point_color);
+			}
 		}
 	}
 	else {
@@ -752,6 +765,8 @@ void render::waveform(
 
 		if (points.size() >= 4) {
 			// Draw Catmull-Rom spline
+			// TODO MR: really small amplitudes still drawing 2 pixels high line? copy zoomed out rect thingy to make it
+			// 1 pixel?
 			for (size_t i = 1; i + 2 < points.size(); ++i) {
 				const gfx::Point& p0 = points[i - 1];
 				const gfx::Point& p1 = points[i];
