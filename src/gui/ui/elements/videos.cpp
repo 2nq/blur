@@ -339,6 +339,10 @@ void render_videos_actual(const ui::Container& container, const ui::AnimatedElem
 			continue;
 
 		auto video_rect = rects[i];
+
+		if (!video_rect.on_screen())
+			continue;
+
 		auto inner_rect = video_rect.shrink(1);
 
 		float player_alpha = alpha * (1.f - fade);
