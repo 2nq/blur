@@ -7,7 +7,6 @@
 // videos
 constexpr gfx::Size LOADER_SIZE(20, 20);
 constexpr gfx::Size LOADER_PAD(5, 5);
-constexpr size_t MAX_BACKGROUND_VIDEOS = 100; // TODO MR: HANDLE
 constexpr float START_FADE = 0.5f;
 constexpr int VIDEO_GAP = 30;
 
@@ -826,9 +825,6 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 	std::vector<VideoElementData::Video> videos;
 
 	for (auto [i, ui_video] : u::enumerate(ui_videos)) {
-		if (i > MAX_BACKGROUND_VIDEOS)
-			continue;
-
 		auto player_res = get_or_add_player(ui_video.path);
 		auto player = *player_res;
 		auto size = get_size_from_dimensions(container, player);
