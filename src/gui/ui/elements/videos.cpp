@@ -23,7 +23,7 @@ constexpr gfx::Color GRABS_COLOR(175, 175, 175);
 constexpr gfx::Color GRABS_ACTIVE_COLOR(100, 100, 100);
 constexpr gfx::Size GRAB_CLICK_EXPANSION(15, 5);
 
-constexpr float TRACK_MAX_ZOOM_SECS = 1.f;
+constexpr float TRACK_MAX_ZOOM_SECS = 0.6f;
 constexpr size_t WAVEFORM_SAMPLES_PER_SEC = 80;
 
 namespace {
