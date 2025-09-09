@@ -820,7 +820,6 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		return {};
 
 	std::vector<VideoElementData::Video> videos;
-	ui::VideoElementData::Video* active_video = nullptr;
 
 	for (auto [i, ui_video] : u::enumerate(ui_videos)) {
 		if (i > MAX_BACKGROUND_VIDEOS)
@@ -848,23 +847,19 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 
 				video.waveform = *waveform_res;
 			}
+
+			player->set_focused_player(i == index);
 		}
 
-		auto& inserted_video = videos.emplace_back(std::move(video));
-
-		if (i == index) {
-			active_video = &inserted_video;
-			player->set_focused_player(true);
-		}
-		else {
-			player->set_focused_player(false);
-		}
+		videos.emplace_back(std::move(video));
 	}
 
-	if (!active_video)
+	if (videos.size() == 0 || index < 0 || index >= videos.size())
 		return {};
 
-	auto track_rect = get_track_rect(container.current_position, active_video->size);
+	auto& active_video = videos[index];
+
+	auto track_rect = get_track_rect(container.current_position, active_video.size);
 
 	Element element(
 		id,
@@ -893,8 +888,8 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		{ hasher("right_grab"), AnimationState(150.f) }, { hasher("track_zoom_start"), AnimationState(30.f, 0.f) },
 	};
 
-	if (active_video->duration)
-		animations.insert_or_assign(hasher("track_zoom_end"), AnimationState(30.f, *active_video->duration));
+	if (active_video.duration)
+		animations.insert_or_assign(hasher("track_zoom_end"), AnimationState(30.f, *active_video.duration));
 
 	auto* elem = add_element(container, std::move(element), container.element_gap, animations);
 
