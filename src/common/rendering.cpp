@@ -572,7 +572,6 @@ tl::expected<rendering::RenderResult, std::string> rendering::render_frame(
 	if (!output_path)
 		return tl::unexpected(output_path.error());
 
-	// TODO MR: fix
 	RenderCommands commands = { .vspipe_video = detail::build_vspipe_args(input_path, *merged_settings, true),.vspipe_audio = detail::build_vspipe_args(input_path, *merged_settings, false),
 		                        .ffmpeg = { "-loglevel",
 		                                    "error",
