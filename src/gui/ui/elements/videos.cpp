@@ -450,10 +450,9 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 		render::waveform(
 			rect,
 			active_rect,
-			gfx::Color::white(100 * anim),
+			gfx::Color(120, 120, 120, 255 * anim),
 			(*active_video->waveform)->samples,
 			(*active_video->waveform)->max_sample,
-			true,
 			visible_start,
 			visible_end
 		);

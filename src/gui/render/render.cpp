@@ -658,80 +658,128 @@ void render::loader(const gfx::Rect& rect, const gfx::Color& color) {
 	text(rect.center(), color, "loading...", fonts::dejavu, FONT_CENTERED_X | FONT_CENTERED_Y);
 }
 
+static gfx::Point catmull_rom(
+	const gfx::Point& p0, const gfx::Point& p1, const gfx::Point& p2, const gfx::Point& p3, float t
+) {
+	float t2 = t * t;
+	float t3 = t2 * t;
+
+	float x = 0.5f * ((2.0f * p1.x) + (-p0.x + p2.x) * t + (2.0f * p0.x - 5.0f * p1.x + 4.0f * p2.x - p3.x) * t2 +
+	                  (-p0.x + 3.0f * p1.x - 3.0f * p2.x + p3.x) * t3);
+
+	float y = 0.5f * ((2.0f * p1.y) + (-p0.y + p2.y) * t + (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 +
+	                  (-p0.y + 3.0f * p1.y - 3.0f * p2.y + p3.y) * t3);
+
+	return { (int)x, (int)y };
+}
+
 void render::waveform(
 	const gfx::Rect& rect,
 	const gfx::Rect& active_rect,
 	const gfx::Color& color,
 	const std::vector<int16_t>& samples,
 	int16_t max_sample,
-	bool filled,
 	float zoom_start,
 	float zoom_end
 ) {
-	if (samples.empty())
+	if (samples.empty() || max_sample <= 0 || rect.w <= 1)
 		return;
 
-	const size_t width = rect.w;
-	const size_t height = rect.h;
-
-	// Clamp zoom values
 	zoom_start = std::clamp(zoom_start, 0.0f, 1.0f);
 	zoom_end = std::clamp(zoom_end, 0.0f, 1.0f);
-
 	if (zoom_start >= zoom_end)
 		return;
 
-	// Calculate which portion of the waveform samples to use
-	size_t total_samples = samples.size();
-	size_t start_sample = static_cast<size_t>(zoom_start * total_samples);
-	size_t end_sample = static_cast<size_t>(zoom_end * total_samples);
-	end_sample = std::min(end_sample, total_samples);
+	const int width = rect.w;
+	const int height = rect.h;
+	const int y_center = rect.y + height / 2;
+	const float scale = height * 0.5f;
 
-	if (start_sample >= end_sample)
+	const size_t total_samples = samples.size();
+	const size_t start_idx = static_cast<size_t>(zoom_start * total_samples);
+	const size_t end_idx = std::min(static_cast<size_t>(zoom_end * total_samples), total_samples);
+
+	if (start_idx >= end_idx)
 		return;
 
-	size_t zoomed_sample_count = end_sample - start_sample;
+	const size_t sample_range = end_idx - start_idx;
+	const float samples_per_pixel = static_cast<float>(sample_range) / width;
 
-	for (size_t x = 0; x < width; ++x) {
-		// Map pixel x to corresponding sample index within the zoomed range
-		float sample_pos = static_cast<float>(x) / width * zoomed_sample_count;
-		size_t idx_start = start_sample + static_cast<size_t>(sample_pos);
-		size_t idx_end =
-			start_sample +
-			std::min(
-				static_cast<size_t>(sample_pos + (zoomed_sample_count / static_cast<float>(width))), zoomed_sample_count
-			);
+	if (samples_per_pixel >= 2.0f) {
+		// Zoomed out: draw amplitude envelope
+		for (int x = 0; x < width; ++x) {
+			const size_t pixel_start = start_idx + static_cast<size_t>(x * samples_per_pixel);
+			const size_t pixel_end = std::min(start_idx + static_cast<size_t>((x + 1) * samples_per_pixel), end_idx);
 
-		// Ensure we don't go beyond our sample bounds
-		idx_start = std::min(idx_start, end_sample - 1);
-		idx_end = std::min(idx_end, end_sample);
+			// Find peak amplitude in this pixel range
+			float peak_amplitude = 0.0f;
+			for (size_t i = pixel_start; i < pixel_end; ++i) {
+				peak_amplitude = std::max(peak_amplitude, std::abs(static_cast<float>(samples[i]) / max_sample));
+			}
 
-		if (idx_start >= idx_end)
-			continue;
+			// Draw symmetric line above and below center
+			const int amplitude_height = static_cast<int>(peak_amplitude * scale);
+			const int y_top = y_center - amplitude_height;
+			const int y_bottom = y_center + amplitude_height;
 
-		// Take max amplitude in this range
-		int16_t max_amp = 0;
-		for (size_t i = idx_start; i < idx_end; ++i) {
-			max_amp = std::max(max_amp, static_cast<int16_t>(std::abs(samples[i])));
+			const gfx::Point p1{ rect.x + x, y_top };
+			const gfx::Point p2{ rect.x + x, y_bottom };
+
+			auto line_color = color;
+			if (!active_rect.contains(p1) && !active_rect.contains(p2)) {
+				line_color = line_color.adjust_alpha(0.5f);
+			}
+
+			line(p1, p2, line_color, true, 1.0f);
+		}
+	}
+	else {
+		// Zoomed in: draw smooth interpolated curve
+		std::vector<gfx::Point> points;
+		points.reserve(sample_range);
+
+		for (size_t i = start_idx; i < end_idx; ++i) {
+			const float amplitude = std::abs(static_cast<float>(samples[i]) / max_sample);
+			const int x = rect.x + static_cast<int>((i - start_idx) * width / static_cast<float>(sample_range));
+
+			// Alternate above/below center based on sample index
+			const bool draw_above = (i % 2 == 0);
+			const int y = draw_above ? y_center - static_cast<int>(amplitude * scale)  // Above center
+			                         : y_center + static_cast<int>(amplitude * scale); // Below center
+
+			points.push_back({ x, y });
 		}
 
-		// Normalize to [0,1]
-		float norm = static_cast<float>(max_amp) / max_sample;
-		int y_center = rect.y + (height / 2);
-		int y_half = static_cast<int>(norm * (height / 2.f));
+		if (points.size() >= 4) {
+			// Draw Catmull-Rom spline
+			for (size_t i = 1; i + 2 < points.size(); ++i) {
+				const gfx::Point& p0 = points[i - 1];
+				const gfx::Point& p1 = points[i];
+				const gfx::Point& p2 = points[i + 1];
+				const gfx::Point& p3 = points[i + 2];
 
-		auto x_color = color;
-		if (!active_rect.contains(gfx::Point(rect.x + x, y_center)))
-			x_color = color.adjust_alpha(0.5f);
+				auto segment_color = color;
+				if (!active_rect.contains(p1) && !active_rect.contains(p2)) {
+					segment_color = segment_color.adjust_alpha(0.5f);
+				}
 
-		if (filled) {
-			gfx::Rect r{ static_cast<int>(rect.x + x), y_center - y_half, 1, y_half * 2 };
-			rect_filled(r, x_color);
+				gfx::Point prev = p1;
+				for (int j = 1; j <= 12; ++j) {
+					const float t = j / 12.0f;
+					const gfx::Point current = catmull_rom(p0, p1, p2, p3, t);
+					line(prev, current, segment_color, true, 1.5f);
+					prev = current;
+				}
+			}
 		}
-		else {
-			gfx::Point p1{ static_cast<int>(rect.x + x), y_center - y_half };
-			gfx::Point p2{ static_cast<int>(rect.x + x), y_center + y_half };
-			line(p1, p2, x_color, true);
+		else if (points.size() >= 2) {
+			for (size_t i = 1; i < points.size(); ++i) {
+				auto segment_color = color;
+				if (!active_rect.contains(points[i - 1]) && !active_rect.contains(points[i])) {
+					segment_color = segment_color.adjust_alpha(0.5f);
+				}
+				line(points[i - 1], points[i], segment_color, true, 1.5f);
+			}
 		}
 	}
 }
