@@ -314,11 +314,15 @@ void render_videos_actual(const ui::Container& container, const ui::AnimatedElem
 	const auto& video_data = std::get<ui::VideoElementData>(element.element->data);
 
 	const auto* active_video = get_active_video(element);
-	if (!active_video || !active_video->player)
+	if (!active_video)
 		return;
 
 	float anim = element.animations.at(ui::hasher("main")).current;
 	float offset = element.animations.at(ui::hasher("video_offset")).current;
+	if (offset == FLT_MAX) {
+		render::loader(element.element->rect, gfx::Color::white(155 * anim));
+		return;
+	}
 
 	int alpha = anim * 255;
 
@@ -338,22 +342,21 @@ void render_videos_actual(const ui::Container& container, const ui::AnimatedElem
 
 		float player_alpha = alpha * (1.f - fade);
 
-		if (video.player && video.player->is_video_ready() && video.player->render(inner_rect.w, inner_rect.h)) {
-			// TODO: render::image
-			render::imgui.drawlist->AddImage(
-				video.player->get_frame_texture_for_render(),
-				inner_rect.origin(),
-				inner_rect.max(),
-				ImVec2(0, 0),
-				ImVec2(1, 1),
-				IM_COL32(255, 255, 255, player_alpha) // apply alpha for fade animations
-			);
-		}
-		else {
+		if (!(video.player && video.player->is_video_ready() && video.player->render(inner_rect.w, inner_rect.h))) {
 			gfx::Rect loader_rect = inner_rect.shrink(LOADER_PAD, true);
 			render::loader(loader_rect, gfx::Color::white(155 * anim));
-			return;
+			continue;
 		}
+
+		// TODO: render::image
+		render::imgui.drawlist->AddImage(
+			video.player->get_frame_texture_for_render(),
+			inner_rect.origin(),
+			inner_rect.max(),
+			ImVec2(0, 0),
+			ImVec2(1, 1),
+			IM_COL32(255, 255, 255, player_alpha) // apply alpha for fade animations
+		);
 
 		// else {
 		// 	auto thumbnail_texture = get_thumbnail(video_data.videos[i]); // TEMPORARY [i] ACCESS TODO: PROPER
