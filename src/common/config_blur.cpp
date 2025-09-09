@@ -422,6 +422,7 @@ tl::expected<nlohmann::json, std::string> BlurSettings::to_json() const {
 	j["interpolation_blocksize"] = this->advanced.interpolation_blocksize;
 	j["interpolation_mask_area"] = this->advanced.interpolation_mask_area;
 
+	// TODO: doing this here is stupid probably
 	auto rife_model_path = get_rife_model_path();
 	if (!rife_model_path)
 		return tl::unexpected(rife_model_path.error());
