@@ -187,6 +187,8 @@ namespace {
 		}
 	}
 
+	std::unordered_map<std::string, std::filesystem::path> last_active_video;
+
 	struct GrabRects {
 		gfx::Rect left;
 		gfx::Rect right;
@@ -816,8 +818,10 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 	float& start,
 	float& end
 ) {
-	if (ui_videos.empty())
+	if (ui_videos.empty()) {
+		last_active_video.erase(id);
 		return {};
+	}
 
 	std::vector<VideoElementData::Video> videos;
 
@@ -854,8 +858,10 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		videos.emplace_back(std::move(video));
 	}
 
-	if (videos.size() == 0 || index < 0 || index >= videos.size())
+	if (videos.size() == 0 || index < 0 || index >= videos.size()) {
+		last_active_video.erase(id);
 		return {};
+	}
 
 	auto& active_video = videos[index];
 
@@ -881,17 +887,40 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		remove_videos
 	);
 
-	std::unordered_map<size_t, AnimationState> animations = {
-		{ hasher("main"), AnimationState(25.f) },        { hasher("video_offset"), AnimationState(25.f, FLT_MAX, 1.f) },
-		{ hasher("progress"), AnimationState(70.f) },    { hasher("seeking"), AnimationState(70.f) },
-		{ hasher("seek"), AnimationState(70.f) },        { hasher("left_grab"), AnimationState(150.f) },
-		{ hasher("right_grab"), AnimationState(150.f) }, { hasher("track_zoom_start"), AnimationState(30.f, 0.f) },
-	};
+	auto* elem = add_element(
+		container,
+		std::move(element),
+		container.element_gap,
+		{
+			{ hasher("main"), AnimationState(25.f) },
+			{ hasher("video_offset"), AnimationState(25.f, FLT_MAX, 1.f) },
+			{ hasher("progress"), AnimationState(70.f) },
+			{ hasher("seeking"), AnimationState(70.f) },
+			{ hasher("seek"), AnimationState(70.f) },
+			{ hasher("left_grab"), AnimationState(150.f) },
+			{ hasher("right_grab"), AnimationState(150.f) },
+		}
+	);
 
-	if (active_video.duration)
-		animations.insert_or_assign(hasher("track_zoom_end"), AnimationState(30.f, *active_video.duration));
+	auto track_zoom_start_hash = hasher("track_zoom_start");
+	auto track_zoom_end_hash = hasher("track_zoom_end");
 
-	auto* elem = add_element(container, std::move(element), container.element_gap, animations);
+	// deinitialise zoom on video switch
+	if (elem->animations.contains(track_zoom_end_hash)) {
+		if (!last_active_video.contains(id) || last_active_video.at(id) != active_video.path) {
+			elem->animations.erase(track_zoom_start_hash);
+			elem->animations.erase(track_zoom_end_hash);
+			DEBUG_LOG("switched video, deinitialised zoom");
+		}
+	}
+
+	// initialise zoom
+	if (!elem->animations.contains(track_zoom_end_hash) && active_video.duration) {
+		elem->animations.emplace(track_zoom_start_hash, AnimationState(30.f, 0.f));
+		elem->animations.emplace(track_zoom_end_hash, AnimationState(30.f, *active_video.duration));
+		last_active_video.insert_or_assign(id, active_video.path);
+		DEBUG_LOG("initialised zoom");
+	}
 
 	// some stuff has to update every time, not just on events
 	update_progress(*elem);
