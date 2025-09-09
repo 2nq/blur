@@ -456,6 +456,22 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 
 	rect = rect.shrink(1);
 
+	if (active_video->waveform) {
+		auto active_rect = rect;
+		active_rect.x = grab_rects.left.x;
+		active_rect.w = grab_rects.right.x2() - active_rect.x;
+
+		render::waveform(
+			rect,
+			active_rect,
+			gfx::Color(120, 120, 120, 255 * anim),
+			(*active_video->waveform)->samples,
+			(*active_video->waveform)->max_sample,
+			visible_start,
+			visible_end
+		);
+	}
+
 	// Convert progress from normalized (0-1) to visible window coordinates
 	float progress_timeline = progress * (*active_video->duration);
 	float progress_local = (progress_timeline - track_zoom_start) / (track_zoom_end - track_zoom_start);
@@ -475,22 +491,6 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 		seek_point.x = rect.x + static_cast<int>(seek_local * rect.w);
 
 		render::line(seek_point, seek_point.offset_y(rect.h), gfx::Color::white(75 * anim * seeking), false, 2.f);
-	}
-
-	if (active_video->waveform) {
-		auto active_rect = rect;
-		active_rect.x = grab_rects.left.x;
-		active_rect.w = grab_rects.right.x2() - active_rect.x;
-
-		render::waveform(
-			rect,
-			active_rect,
-			gfx::Color(120, 120, 120, 255 * anim),
-			(*active_video->waveform)->samples,
-			(*active_video->waveform)->max_sample,
-			visible_start,
-			visible_end
-		);
 	}
 
 	render::pop_clip_rect();
