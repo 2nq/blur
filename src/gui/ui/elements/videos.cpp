@@ -542,8 +542,10 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	struct GrabHandle {
 		gfx::Rect rect;
 		ui::AnimationState& anim;
-		float* var_ptr;
-		void (*update_fn)(const ui::VideoElementData::Video&, float);
+		float* var_ptr = nullptr;
+		float* min_ptr = nullptr;
+		float* max_ptr = nullptr;
+		void (*update_fn)(const ui::VideoElementData::Video&, float){};
 		bool hovered = false;
 		bool active = false;
 	};
@@ -553,6 +555,7 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			.rect = grab_rects.left.expand(GRAB_CLICK_EXPANSION),
 			.anim = element.animations.at(ui::hasher("left_grab")),
 			.var_ptr = video_data.start,
+			.max_ptr = video_data.end,
 			.update_fn =
 				[](const auto& v, float p) {
 					v.player->set_start(p);
@@ -562,6 +565,7 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			.rect = grab_rects.right.expand(GRAB_CLICK_EXPANSION),
 			.anim = element.animations.at(ui::hasher("right_grab")),
 			.var_ptr = video_data.end,
+			.min_ptr = video_data.start,
 			.update_fn =
 				[](const auto& v, float p) {
 					v.player->set_end(p);
@@ -592,7 +596,10 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				local_mouse_percent = std::clamp(local_mouse_percent, 0.f, 1.f);
 
 				float timeline_percent = visible_start + local_mouse_percent * visible_range;
-				timeline_percent = std::clamp(timeline_percent, 0.f, 1.f);
+
+				timeline_percent = std::clamp(
+					timeline_percent, grab.min_ptr ? *grab.min_ptr : 0.f, grab.max_ptr ? *grab.max_ptr : 1.f
+				);
 
 				*grab.var_ptr = timeline_percent;
 				grab.update_fn(*active_video, timeline_percent);
