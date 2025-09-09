@@ -146,15 +146,20 @@ target_compile_definitions(blur PRIVATE IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
 target_include_directories(blur PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/stb)
 
 # mpv
-find_package(PkgConfig REQUIRED)
-pkg_search_module(MPV REQUIRED mpv>=0.33.0)
-target_include_directories(blur PRIVATE ${MPV_INCLUDE_DIRS})
-target_link_libraries(blur PRIVATE ${MPV_LIBRARIES})
-target_link_directories(blur PRIVATE ${MPV_LIBRARY_DIRS})
+# find_package(PkgConfig REQUIRED)
+# pkg_search_module(MPV REQUIRED mpv>=0.33.0)
+# target_include_directories(blur PRIVATE ${MPV_INCLUDE_DIRS})
+# target_link_libraries(blur PRIVATE ${MPV_LIBRARIES})
+# target_link_directories(blur PRIVATE ${MPV_LIBRARY_DIRS})
+target_include_directories(
+  blur PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/mpv/include)
+find_library(MPV_LIBRARY mpv PATHS
+"${PROJECT_SOURCE_DIR}/dependencies/mpv-lib" REQUIRED)
+find_library(MPV_LIBRARY mpv REQUIRED)
 
 target_link_libraries(
   blur PRIVATE blur-common SDL3::SDL3 SDL3_image::SDL3_image Freetype::Freetype
-               glad::glad)
+               glad::glad ${MPV_LIBRARY})
 
 if(APPLE)
   # Disable precompiled headers for the .mm file and .cpp file
