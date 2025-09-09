@@ -160,6 +160,8 @@ namespace ui {
 		size_t* index;
 		float* start;
 		float* end;
+		float saved_percent;
+		bool grabbing;
 
 		// persistent
 		std::optional<std::filesystem::path> last_active_video;
