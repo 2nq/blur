@@ -375,6 +375,9 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 	if (!active_video || !active_video->player || !active_video->duration)
 		return;
 
+	if (!element.animations.contains(ui::hasher("track_zoom_end")))
+		return;
+
 	auto rect = get_track_rect(element.element->rect.origin(), active_video->size);
 
 	float anim = element.animations.at(ui::hasher("main")).current;
@@ -476,6 +479,9 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 
 	const auto* active_video = get_active_video(element);
 	if (!active_video || !active_video->duration)
+		return false;
+
+	if (!element.animations.contains(ui::hasher("track_zoom_end")))
 		return false;
 
 	bool updated = false;
