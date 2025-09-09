@@ -186,8 +186,6 @@ namespace {
 		}
 	}
 
-	std::unordered_map<std::string, std::filesystem::path> last_active_video;
-
 	struct GrabRects {
 		gfx::Rect left;
 		gfx::Rect right;
@@ -288,6 +286,35 @@ namespace {
 			if (initial)
 				offset_anim.current = *offset;
 			offset_anim.set_goal(*offset);
+		}
+	}
+
+	void init_zoom(ui::AnimatedElement& element) {
+		auto& video_data = std::get<ui::VideoElementData>(element.element->data);
+
+		auto track_zoom_start_hash = ui::hasher("track_zoom_start");
+		auto track_zoom_end_hash = ui::hasher("track_zoom_end");
+
+		const auto& active_video = video_data.videos[*video_data.index];
+
+		// deinitialise zoom on video switch
+		if (element.animations.contains(track_zoom_end_hash)) {
+			if (!video_data.last_active_video || *video_data.last_active_video != active_video.path) {
+				element.animations.erase(track_zoom_start_hash);
+				element.animations.erase(track_zoom_end_hash);
+
+				DEBUG_LOG("switched video, deinitialised zoom");
+			}
+		}
+
+		// initialise zoom
+		if (!element.animations.contains(track_zoom_end_hash) && active_video.duration) {
+			element.animations.emplace(track_zoom_start_hash, ui::AnimationState(30.f, 0.f));
+			element.animations.emplace(track_zoom_end_hash, ui::AnimationState(30.f, *active_video.duration));
+
+			video_data.last_active_video = active_video.path;
+
+			DEBUG_LOG("initialised zoom");
 		}
 	}
 }
@@ -821,10 +848,8 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 	float& start,
 	float& end
 ) {
-	if (ui_videos.empty()) {
-		last_active_video.erase(id);
+	if (ui_videos.empty())
 		return {};
-	}
 
 	std::vector<VideoElementData::Video> videos;
 
@@ -858,10 +883,8 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		videos.emplace_back(std::move(video));
 	}
 
-	if (videos.size() == 0 || index < 0 || index >= videos.size()) {
-		last_active_video.erase(id);
+	if (videos.size() == 0 || index < 0 || index >= videos.size())
 		return {};
-	}
 
 	auto& active_video = videos[index];
 
@@ -902,25 +925,7 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		}
 	);
 
-	auto track_zoom_start_hash = hasher("track_zoom_start");
-	auto track_zoom_end_hash = hasher("track_zoom_end");
-
-	// deinitialise zoom on video switch
-	if (elem->animations.contains(track_zoom_end_hash)) {
-		if (!last_active_video.contains(id) || last_active_video.at(id) != active_video.path) {
-			elem->animations.erase(track_zoom_start_hash);
-			elem->animations.erase(track_zoom_end_hash);
-			DEBUG_LOG("switched video, deinitialised zoom");
-		}
-	}
-
-	// initialise zoom
-	if (!elem->animations.contains(track_zoom_end_hash) && active_video.duration) {
-		elem->animations.emplace(track_zoom_start_hash, AnimationState(30.f, 0.f));
-		elem->animations.emplace(track_zoom_end_hash, AnimationState(30.f, *active_video.duration));
-		last_active_video.insert_or_assign(id, active_video.path);
-		DEBUG_LOG("initialised zoom");
-	}
+	init_zoom(*elem);
 
 	// some stuff has to update every time, not just on events
 	update_progress(*elem);

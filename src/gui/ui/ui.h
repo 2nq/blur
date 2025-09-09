@@ -161,6 +161,9 @@ namespace ui {
 		float* start;
 		float* end;
 
+		// persistent
+		std::optional<std::filesystem::path> last_active_video;
+
 		bool operator==(const VideoElementData& other) const {
 			return videos == other.videos && index == other.index && start == other.start && end == other.end;
 		}
