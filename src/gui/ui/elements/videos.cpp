@@ -280,9 +280,6 @@ namespace {
 			return;
 
 		auto& progress_anim = element.animations.at(ui::hasher("progress"));
-		
-		if (video_data.saved_percent != -1.f) {
-			auto progress_percent = active_video->player->get_percent_pos();
 
 		// the trim handle isn't being grabbed (need a saved preview to return to after letting go) 
 		if (video_data.saved_percent) {
