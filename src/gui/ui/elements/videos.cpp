@@ -186,8 +186,6 @@ namespace {
 		}
 	}
 
-	std::unordered_map<std::string, std::filesystem::path> last_active_video;
-
 	struct GrabRects {
 		gfx::Rect left;
 		gfx::Rect right;
@@ -308,10 +306,36 @@ namespace {
 			offset_anim.set_goal(*offset);
 		}
 	}
-}
 
-// small map to store last pan X while dragging per element id
-static std::unordered_map<std::string, int> g_last_pan_x;
+	void init_zoom(ui::AnimatedElement& element) {
+		auto& video_data = std::get<ui::VideoElementData>(element.element->data);
+
+		auto track_zoom_start_hash = ui::hasher("track_zoom_start");
+		auto track_zoom_end_hash = ui::hasher("track_zoom_end");
+
+		const auto& active_video = video_data.videos[*video_data.index];
+
+		// deinitialise zoom on video switch
+		if (element.animations.contains(track_zoom_end_hash)) {
+			if (!video_data.last_active_video || *video_data.last_active_video != active_video.path) {
+				element.animations.erase(track_zoom_start_hash);
+				element.animations.erase(track_zoom_end_hash);
+
+				DEBUG_LOG("switched video, deinitialised zoom");
+			}
+		}
+
+		// initialise zoom
+		if (!element.animations.contains(track_zoom_end_hash) && active_video.duration) {
+			element.animations.emplace(track_zoom_start_hash, ui::AnimationState(30.f, 0.f));
+			element.animations.emplace(track_zoom_end_hash, ui::AnimationState(30.f, *active_video.duration));
+
+			video_data.last_active_video = active_video.path;
+
+			DEBUG_LOG("initialised zoom");
+		}
+	}
+}
 
 void ui::handle_videos_event(const SDL_Event& event, bool& to_render) {
 	for (auto& [id, player] : video_players) {
@@ -450,6 +474,22 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 
 	rect = rect.shrink(1);
 
+	if (active_video->waveform) {
+		auto active_rect = rect;
+		active_rect.x = grab_rects.left.x;
+		active_rect.w = grab_rects.right.x2() - active_rect.x;
+
+		render::waveform(
+			rect,
+			active_rect,
+			gfx::Color(120, 120, 120, 255 * anim),
+			(*active_video->waveform)->samples,
+			(*active_video->waveform)->max_sample,
+			visible_start,
+			visible_end
+		);
+	}
+
 	// Convert progress from normalized (0-1) to visible window coordinates
 	float progress_timeline = progress * (*active_video->duration);
 	float progress_local = (progress_timeline - track_zoom_start) / (track_zoom_end - track_zoom_start);
@@ -469,22 +509,6 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 		seek_point.x = rect.x + static_cast<int>(seek_local * rect.w);
 
 		render::line(seek_point, seek_point.offset_y(rect.h), gfx::Color::white(75 * anim * seeking), false, 2.f);
-	}
-
-	if (active_video->waveform) {
-		auto active_rect = rect;
-		active_rect.x = grab_rects.left.x;
-		active_rect.w = grab_rects.right.x2() - active_rect.x;
-
-		render::waveform(
-			rect,
-			active_rect,
-			gfx::Color(120, 120, 120, 255 * anim),
-			(*active_video->waveform)->samples,
-			(*active_video->waveform)->max_sample,
-			visible_start,
-			visible_end
-		);
 	}
 
 	render::pop_clip_rect();
@@ -536,8 +560,10 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	struct GrabHandle {
 		gfx::Rect rect;
 		ui::AnimationState& anim;
-		float* var_ptr;
-		void (*update_fn)(const ui::VideoElementData::Video&, float);
+		float* var_ptr = nullptr;
+		float* min_ptr = nullptr;
+		float* max_ptr = nullptr;
+		void (*update_fn)(const ui::VideoElementData::Video&, float){};
 		bool hovered = false;
 		bool active = false;
 	};
@@ -547,6 +573,7 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			.rect = grab_rects.left.expand(GRAB_CLICK_EXPANSION),
 			.anim = element.animations.at(ui::hasher("left_grab")),
 			.var_ptr = video_data.start,
+			.max_ptr = video_data.end,
 			.update_fn =
 				[](const auto& v, float p) {
 					v.player->set_start(p);
@@ -556,6 +583,7 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			.rect = grab_rects.right.expand(GRAB_CLICK_EXPANSION),
 			.anim = element.animations.at(ui::hasher("right_grab")),
 			.var_ptr = video_data.end,
+			.min_ptr = video_data.start,
 			.update_fn =
 				[](const auto& v, float p) {
 					v.player->set_end(p);
@@ -596,7 +624,10 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				local_mouse_percent = std::clamp(local_mouse_percent, 0.f, 1.f);
 
 				float timeline_percent = visible_start + local_mouse_percent * visible_range;
-				timeline_percent = std::clamp(timeline_percent, 0.f, 1.f);
+
+				timeline_percent = std::clamp(
+					timeline_percent, grab.min_ptr ? *grab.min_ptr : 0.f, grab.max_ptr ? *grab.max_ptr : 1.f
+				);
 
 				*grab.var_ptr = timeline_percent;
 				grab.update_fn(*active_video, timeline_percent);
@@ -629,23 +660,6 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	bool hovered = !updated && rect.contains(keys::mouse_pos) && set_hovered_element(element);
 	bool active = ui::get_active_element() == &element;
 
-	std::string pan_action = "video_pan";
-
-	if (hovered) {
-		if (keys::is_mouse_down(SDL_BUTTON_RIGHT)) {
-			// mark pan active
-			if (!ui::get_active_element()) {
-				set_active_element(element, pan_action);
-
-				// initialize last pan position if not present
-				g_last_pan_x[element.element->id] = keys::mouse_pos.x;
-			}
-		}
-		else if (keys::is_mouse_down()) {
-			set_active_element(element, "video track");
-		}
-	}
-
 	auto apply_pan = [&](float timeline_delta) {
 		float new_start = track_zoom_start_anim.goal - timeline_delta;
 		float new_end = track_zoom_end_anim.goal - timeline_delta;
@@ -667,6 +681,7 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 		updated = true;
 	};
 
+	// scroll actions
 	if (rect.contains(keys::mouse_pos)) {
 		// panning (with horizontal scroll)
 		if (keys::scroll_x_delta != 0.f) {
@@ -723,20 +738,38 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	}
 
 	// panning (with right click)
+	std::string pan_action = "video_pan";
+
+	if (hovered) {
+		if (keys::is_mouse_down(SDL_BUTTON_RIGHT)) {
+			// mark pan active
+			if (!ui::get_active_element()) {
+				set_active_element(element, pan_action);
+			}
+		}
+		else if (keys::is_mouse_down()) {
+			set_active_element(element, "video track");
+		}
+	}
+
 	if (is_active_element(element, pan_action)) {
 		if (keys::is_mouse_down(SDL_BUTTON_RIGHT)) {
-			int last_x = g_last_pan_x[element.element->id];
 			int cur_x = keys::mouse_pos.x;
-			int dx = cur_x - last_x;
-			g_last_pan_x[element.element->id] = cur_x;
 
-			// Convert pixel delta to timeline delta
-			float timeline_delta = ((float)dx / rect.w) * zoom_range;
-			apply_pan(timeline_delta);
+			if (video_data.last_pan_x) {
+				int last_x = *video_data.last_pan_x;
+				int dx = cur_x - last_x;
+
+				// convert pixel delta to timeline delta
+				float timeline_delta = ((float)dx / rect.w) * zoom_range;
+				apply_pan(timeline_delta);
+			}
+
+			video_data.last_pan_x = cur_x;
 		}
 		else {
 			ui::reset_active_element();
-			g_last_pan_x.erase(element.element->id);
+			video_data.last_pan_x = {};
 		}
 	}
 
@@ -858,10 +891,8 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 	float& start,
 	float& end
 ) {
-	if (ui_videos.empty()) {
-		last_active_video.erase(id);
+	if (ui_videos.empty())
 		return {};
-	}
 
 	std::vector<VideoElementData::Video> videos;
 
@@ -895,10 +926,8 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		videos.emplace_back(std::move(video));
 	}
 
-	if (videos.size() == 0 || index < 0 || index >= videos.size()) {
-		last_active_video.erase(id);
+	if (videos.size() == 0 || index < 0 || index >= videos.size())
 		return {};
-	}
 
 	auto& active_video = videos[index];
 
@@ -939,25 +968,7 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		}
 	);
 
-	auto track_zoom_start_hash = hasher("track_zoom_start");
-	auto track_zoom_end_hash = hasher("track_zoom_end");
-
-	// deinitialise zoom on video switch
-	if (elem->animations.contains(track_zoom_end_hash)) {
-		if (!last_active_video.contains(id) || last_active_video.at(id) != active_video.path) {
-			elem->animations.erase(track_zoom_start_hash);
-			elem->animations.erase(track_zoom_end_hash);
-			DEBUG_LOG("switched video, deinitialised zoom");
-		}
-	}
-
-	// initialise zoom
-	if (!elem->animations.contains(track_zoom_end_hash) && active_video.duration) {
-		elem->animations.emplace(track_zoom_start_hash, AnimationState(30.f, 0.f));
-		elem->animations.emplace(track_zoom_end_hash, AnimationState(30.f, *active_video.duration));
-		last_active_video.insert_or_assign(id, active_video.path);
-		DEBUG_LOG("initialised zoom");
-	}
+	init_zoom(*elem);
 
 	// some stuff has to update every time, not just on events
 	update_progress(*elem);
