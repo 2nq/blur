@@ -268,33 +268,34 @@ namespace {
 
 	void update_progress(ui::AnimatedElement& element) {
 		auto& video_data = std::get<ui::VideoElementData>(element.element->data);
-		if (video_data.grabbing)
+		if (video_data.handle_info.grabbing)
 			return;
 
 		const auto* active_video = get_active_video(element);
 		if (!active_video || !active_video->player)
 			return;
 
-		auto& progress_anim = element.animations.at(ui::hasher("progress"));
-		
-		if (video_data.saved_percent != -1.f) {
-			auto progress_percent = active_video->player->get_percent_pos();
+		auto progress_percent = active_video->player->get_percent_pos();
+		if (!progress_percent)
+			return;
 
-			// wait for the mpv event to officially seek back to where we started after letting go,
-			// after that we can resume regular seeking
-			if (progress_percent && video_data.saved_percent == *progress_percent / 100.f) {
-				video_data.saved_percent = -1.f;
+		auto& progress_anim = element.animations.at(ui::hasher("progress"));
+
+		// the trim handle isn't being grabbed (need a saved preview to return to after letting go) 
+		if (video_data.saved_percent) {
+			// wait for the mpv event to set video progress percent, after that we can resume regular seeking
+			if (*video_data.saved_percent == *progress_percent / 100.f) {
+				video_data.saved_percent = std::nullopt;
 				u::log("reached saved seek position");
 			}
 			else {
 				u::log("waiting for saved seek position to update");
 			}
+
+			return;
 		}
-		else {
-			auto progress_percent = active_video->player->get_percent_pos();
-			if (progress_percent)
-				progress_anim.set_goal(*progress_percent / 100.f);	
-		}
+
+		progress_anim.set_goal(*progress_percent / 100.f);	
 	}
 
 	void update_offset(ui::AnimatedElement& element) {
@@ -562,6 +563,9 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 		},
 	};
 
+	auto& handle_info = video_data.handle_info;
+	bool grab_state = false;
+
 	// Handle grab interactions
 	for (auto [i, grab] : u::enumerate(grabs)) {
 		std::string action = "grab_" + std::to_string(i);
@@ -580,7 +584,7 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				grab.anim.set_goal(1.f);
 
 				// we just started the grab (grabbing will be set to true after the loop)
-				if (!video_data.grabbing) {
+				if (!handle_info.grabbing) {
 					auto progress_percent = active_video->player->get_percent_pos();
 					if (progress_percent)
 						video_data.saved_percent = *progress_percent / 100.f;
@@ -601,8 +605,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			}
 			else {
 				// we just let go of the grab (grabbing will be set to false after the loop)
-				if (video_data.grabbing)
-					active_video->player->seek(video_data.saved_percent, true, false);
+				if (handle_info.grabbing && video_data.saved_percent)
+					active_video->player->seek(*video_data.saved_percent, true, false);
 
 				active_video->player->set_paused(true);
 				ui::reset_active_element();
@@ -613,9 +617,10 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			grab.anim.set_goal(grab.hovered ? 0.5f : 0.f);
 
 		updated |= grab.active;
+		grab_state |= grab.active;
 	}
 
-	video_data.grabbing = updated;
+	handle_info.grabbing = grab_state;
 
 	auto& progress_anim = element.animations.at(ui::hasher("progress"));
 	auto& seeking_anim = element.animations.at(ui::hasher("seeking"));

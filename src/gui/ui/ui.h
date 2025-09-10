@@ -156,12 +156,17 @@ namespace ui {
 			}
 		};
 
+		struct TrimHandleInfo {
+			bool grabbing;
+			// for the future
+		};
+
 		std::vector<Video> videos;
 		size_t* index;
 		float* start;
 		float* end;
-		float saved_percent;
-		bool grabbing;
+		std::optional<float> saved_percent;
+		TrimHandleInfo handle_info;
 
 		bool operator==(const VideoElementData& other) const {
 			return videos == other.videos && index == other.index && start == other.start && end == other.end;
