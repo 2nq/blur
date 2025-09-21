@@ -156,10 +156,17 @@ namespace ui {
 			}
 		};
 
+		struct TrimHandleInfo {
+			bool grabbing;
+			// for the future
+		};
+
 		std::vector<Video> videos;
 		size_t* index;
 		float* start;
 		float* end;
+		std::optional<float> saved_percent;
+		TrimHandleInfo handle_info;
 
 		// persistent
 		std::optional<std::filesystem::path> last_active_video;
