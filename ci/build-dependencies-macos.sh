@@ -175,7 +175,7 @@ download_library \
 # ## RIFE ncnn Vulkan library
 # echo "Downloading RIFE ncnn Vulkan library..."
 # download_library \
-#   "https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan/releases/download/r9_mod_v32/librife_macos_arm64.dylib" \
+#   "https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan/releases/download/r9_mod_v33/librife_macos_arm64.dylib" \
 #   "librife_macos_arm64.dylib" \
 #   "vapoursynth-plugins"
 
@@ -235,7 +235,7 @@ ninja -C build
 " "build" "vapoursynth-plugins"
 
 ## rife ncnn vulkan
-build "https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan.git" "--single-branch" "48da541a7b1f1a71678d2325faa6cf2bd9ef8382" "rife-ncnn-vulkan" "
+build "https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan.git" "--single-branch" "c3ec6aabc07c8fa37a4f58d7fed9e2ad1fc1b13f" "rife-ncnn-vulkan" "
 git submodule update --init --recursive --depth 1
 meson build
 ninja -C build
@@ -256,7 +256,7 @@ echo "Starting model downloads..."
 
 # Download RIFE models
 download_model_files \
-  "https://raw.githubusercontent.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan/a2579e656dac7909a66e7da84578a2f80ccba41c/models/rife-v4.26_ensembleFalse" \
+  "https://raw.githubusercontent.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan/c3ec6aabc07c8fa37a4f58d7fed9e2ad1fc1b13f/models/rife-v4.26_ensembleFalse" \
   "rife-v4.26_ensembleFalse" \
   "flownet.bin" "flownet.param"
 
