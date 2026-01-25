@@ -81,32 +81,35 @@ bool render::init(SDL_Window* window, const SDL_GLContext& context) {
 
 	// TODO: Consider using ImFontGlyphRangesBuilder to build glyph ranges from textual data.
 
-	ImFontGlyphRangesBuilder builder;
-	builder.AddRanges(imgui.io->Fonts->GetGlyphRangesDefault());
-	builder.AddRanges(imgui.io->Fonts->GetGlyphRangesGreek());
-	builder.AddRanges(imgui.io->Fonts->GetGlyphRangesKorean());
-	builder.AddRanges(imgui.io->Fonts->GetGlyphRangesJapanese());
-	builder.AddRanges(imgui.io->Fonts->GetGlyphRangesChineseSimplifiedCommon());
-	builder.AddRanges(imgui.io->Fonts->GetGlyphRangesCyrillic());
-	builder.AddRanges(imgui.io->Fonts->GetGlyphRangesThai());
-	builder.AddRanges(imgui.io->Fonts->GetGlyphRangesVietnamese());
-	ImVector<ImWchar> custom_ranges;
-	builder.BuildRanges(&custom_ranges);
+	// ImFontGlyphRangesBuilder builder;
+	// builder.AddRanges(imgui.io->Fonts->GetGlyphRangesDefault());
+	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesGreek());
+	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesKorean());
+	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesJapanese());
+	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesChineseSimplifiedCommon());
+	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesCyrillic());
+	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesThai());
+	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesVietnamese());
+	// ImVector<ImWchar> custom_ranges;
+	// builder.BuildRanges(&custom_ranges);
+
+	// ^ TODO: RANDOM CRASH TODO REFACTOR  IMPORTANT FIX  YES
+	const auto* ranges = imgui.io->Fonts->GetGlyphRangesDefault();
 
 	ImFontConfig font_cfg;
 	font_cfg.RasterizerDensity = SDL_GetWindowPixelDensity(window); // TODO PORT: update when changing screen
 
 	// init fonts
-	if (!fonts::dejavu.init(DEJAVU_SANS_COMPRESSED_DATA, 13.f, &font_cfg, custom_ranges.Data))
+	if (!fonts::dejavu.init(DEJAVU_SANS_COMPRESSED_DATA, 13.f, &font_cfg, ranges))
 		return false;
 
-	if (!fonts::header_font.init(EB_GARAMOND_COMPRESSED_DATA, 30.f, &font_cfg, custom_ranges.Data))
+	if (!fonts::header_font.init(EB_GARAMOND_COMPRESSED_DATA, 30.f, &font_cfg, ranges))
 		return false;
 
-	if (!fonts::smaller_header_font.init(EB_GARAMOND_COMPRESSED_DATA, 18.f, &font_cfg, custom_ranges.Data))
+	if (!fonts::smaller_header_font.init(EB_GARAMOND_COMPRESSED_DATA, 18.f, &font_cfg, ranges))
 		return false;
 
-	if (!fonts::icons.init(ICONS_COMPRESSED_DATA, 14.f, &font_cfg, custom_ranges.Data))
+	if (!fonts::icons.init(ICONS_COMPRESSED_DATA, 14.f, &font_cfg, ranges))
 		return false;
 
 	return true;
