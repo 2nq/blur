@@ -63,7 +63,7 @@ jobs:
       - name: Collect dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install ffmpeg libass zimg imagemagick autoconf automake libtool gcc ffmpeg llvm@20 meson xxhash vapoursynth fftw dylibbundler
+          brew install ffmpeg libass zimg imagemagick autoconf automake libtool gcc ffmpeg llvm@20 meson xxhash vapoursynth fftw dylibbundler vulkan-loader molten-vk
           cd ci
           bash build-dependencies-macos.sh
 
