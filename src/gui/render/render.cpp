@@ -705,7 +705,7 @@ void render::waveform(
 	const size_t sample_range = end_idx - start_idx;
 	const float samples_per_pixel = static_cast<float>(sample_range) / width;
 
-	int16_t display_max = u::get_audio_percentile_peak(samples, 0.999f);
+	int16_t display_max = u::get_audio_percentile_peak(samples, 1.f); // 0.999f);
 
 	if (samples_per_pixel >= 2.0f) {
 		// Zoomed out: draw amplitude envelope
