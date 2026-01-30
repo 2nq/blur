@@ -799,6 +799,22 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 		}
 	}
 
+	// hotkeys for start/end cut
+	float current_percent = progress_anim.current;
+
+	// [ = start
+	if (keys::is_key_pressed(SDL_SCANCODE_LEFTBRACKET)) {
+		*video_data.start = std::clamp(current_percent, 0.f, video_data.end ? *video_data.end : 1.f);
+		active_video->player->set_start(current_percent);
+		updated = true;
+	}
+
+	// ] = end
+	if (keys::is_key_pressed(SDL_SCANCODE_RIGHTBRACKET)) {
+		*video_data.end = std::clamp(current_percent, video_data.start ? *video_data.start : 0.f, 1.f);
+		active_video->player->set_end(current_percent);
+		updated = true;
+	}
 	if (!active_video->player->get_queued_seek())
 		seeking_anim.set_goal(0.f);
 
