@@ -1,5 +1,7 @@
 #include "video.h"
 
+const int SEEK_SECS = 3;
+
 VideoPlayer::~VideoPlayer() {
 	m_thread_exit = true;
 	if (m_mpv_thread.joinable())
@@ -35,12 +37,12 @@ void VideoPlayer::handle_key_press(SDL_Keycode key) {
 		}
 
 		case SDLK_LEFT: {
-			run_command_async({ "seek", "-5" });
+			run_command_async({ "seek", std::format("-{}", SEEK_SECS) });
 			break;
 		}
 
 		case SDLK_RIGHT: {
-			run_command_async({ "seek", "5" });
+			run_command_async({ "seek", std::format("{}", SEEK_SECS) });
 			break;
 		}
 
