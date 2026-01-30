@@ -836,15 +836,22 @@ bool update_videos_actual(const ui::Container& container, ui::AnimatedElement& e
 			if (keys::is_mouse_down()) {
 				keys::on_mouse_press_handled(SDL_BUTTON_LEFT);
 
-				if (active_video->player)
-					active_video->player->set_paused(true);
+				if (i == *video_data.index) { // same video, pause/unpause
+					auto paused = video.player->get_paused();
+					if (paused)
+						video.player->set_paused(!*paused);
+				}
+				else { // different video, switch to it
+					if (active_video->player)
+						active_video->player->set_paused(true);
 
-				*video_data.index = i;
+					*video_data.index = i;
 
-				// Reset focus state on all players
-				for (auto [j, video] : u::enumerate(video_data.videos)) {
-					if (video.player) {
-						video.player->set_focused_player(j == i);
+					// Reset focus state on all players
+					for (auto [j, video] : u::enumerate(video_data.videos)) {
+						if (video.player) {
+							video.player->set_focused_player(j == i);
+						}
 					}
 				}
 			}
