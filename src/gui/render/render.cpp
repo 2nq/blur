@@ -705,6 +705,8 @@ void render::waveform(
 	const size_t sample_range = end_idx - start_idx;
 	const float samples_per_pixel = static_cast<float>(sample_range) / width;
 
+	int16_t display_max = u::get_audio_percentile_peak(samples, 0.999f);
+
 	if (samples_per_pixel >= 2.0f) {
 		// Zoomed out: draw amplitude envelope
 		for (int x = 0; x < width; ++x) {
@@ -714,7 +716,9 @@ void render::waveform(
 			// Find peak amplitude in this pixel range
 			float peak_amplitude = 0.0f;
 			for (size_t i = pixel_start; i < pixel_end; ++i) {
-				peak_amplitude = std::max(peak_amplitude, std::abs(static_cast<float>(samples[i]) / max_sample));
+				float amplitude = std::abs(static_cast<float>(samples[i])) / display_max;
+				amplitude = std::min(amplitude, 1.0f);
+				peak_amplitude = std::max(peak_amplitude, amplitude);
 			}
 
 			// Draw symmetric line above and below center
@@ -752,7 +756,9 @@ void render::waveform(
 		points.reserve(sample_range);
 
 		for (size_t i = start_idx; i < end_idx; ++i) {
-			const float amplitude = std::abs(static_cast<float>(samples[i]) / max_sample);
+			float amplitude = std::abs(static_cast<float>(samples[i])) / display_max;
+			amplitude = std::min(amplitude, 1.0f);
+
 			const int x = rect.x + static_cast<int>((i - start_idx) * width / static_cast<float>(sample_range));
 
 			// Alternate above/below center based on sample index

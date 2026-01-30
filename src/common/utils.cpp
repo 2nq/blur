@@ -429,6 +429,25 @@ std::vector<int16_t> u::get_video_waveform(const std::filesystem::path& path, in
 	return downsampled;
 }
 
+int16_t u::get_audio_percentile_peak(const std::vector<int16_t>& samples, float percentile) {
+	if (samples.empty())
+		return 1;
+
+	// sort samples from quietest->loudest
+	std::vector<int16_t> abs_samples;
+	abs_samples.reserve(samples.size());
+	for (int16_t sample : samples) {
+		abs_samples.push_back(std::abs(sample));
+	}
+
+	std::ranges::sort(abs_samples);
+
+	// get xth percentile amplitude
+	auto idx = static_cast<size_t>(percentile * abs_samples.size());
+	idx = std::min(idx, abs_samples.size() - 1);
+	return std::max(abs_samples[idx], static_cast<int16_t>(1));
+}
+
 bool u::test_hardware_device(const std::string& device_type) {
 	namespace bp = boost::process;
 
