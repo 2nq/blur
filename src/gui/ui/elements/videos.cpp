@@ -832,6 +832,8 @@ bool update_videos_actual(const ui::Container& container, ui::AnimatedElement& e
 
 	for (auto [i, video] : u::enumerate(video_data.videos)) {
 		if (rects[i].contains(keys::mouse_pos)) {
+			ui::set_cursor(SDL_SYSTEM_CURSOR_POINTER);
+
 			if (keys::is_mouse_down()) {
 				keys::on_mouse_press_handled(SDL_BUTTON_LEFT);
 
