@@ -20,6 +20,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
     ${PROJECT_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
 set(CMAKE_BINARY_DIR ${PROJECT_SOURCE_DIR}/build/${CMAKE_BUILD_TYPE})
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 # packages
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
@@ -146,10 +148,10 @@ target_compile_definitions(blur PRIVATE IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
 target_include_directories(blur PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/stb)
 
 # mpv
-find_package(PkgConfig REQUIRED)
-pkg_search_module(MPV REQUIRED mpv>=0.33.0)
+find_package(MPV REQUIRED)
+
 target_include_directories(blur PRIVATE ${MPV_INCLUDE_DIRS})
-target_link_libraries(blur PRIVATE ${MPV_LIBRARIES})
+target_link_libraries(blur PRIVATE ${MPV_LIBRARY})
 target_link_directories(blur PRIVATE ${MPV_LIBRARY_DIRS})
 
 target_link_libraries(
