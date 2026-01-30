@@ -4,6 +4,7 @@ VideoPlayer::~VideoPlayer() {
 	m_thread_exit = true;
 	if (m_mpv_thread.joinable())
 		m_mpv_thread.join();
+	m_seek_cv.notify_one();
 
 	// clean up opengl resources
 	if (m_tex) {
@@ -36,6 +37,14 @@ void VideoPlayer::load_file(const std::filesystem::path& file_path) {
 	run_command_async({ "loadfile", u::path_to_string(file_path) });
 
 	m_video_loaded = false; // reset video loaded state
+	m_is_seeking = false;
+
+	m_cached_percent_pos = -1.0;
+	m_cached_duration = -1.0;
+	m_cached_fps = 0.0;
+	m_cached_pause = true;
+	m_cached_width = 0;
+	m_cached_height = 0;
 }
 
 void VideoPlayer::gen_fbo_texture() {
@@ -163,6 +172,13 @@ void VideoPlayer::initialize_mpv() {
 	mpv_set_option_string(m_mpv, "keep-open", "yes"); // dont close when finished
 	mpv_set_option_string(m_mpv, "pause", "yes");
 	// mpv_set_option_string(m_mpv, "mute", "yes");
+	//
+	mpv_observe_property(m_mpv, 0, "percent-pos", MPV_FORMAT_DOUBLE);
+	mpv_observe_property(m_mpv, 0, "duration/full", MPV_FORMAT_DOUBLE);
+	mpv_observe_property(m_mpv, 0, "container-fps", MPV_FORMAT_DOUBLE);
+	mpv_observe_property(m_mpv, 0, "pause", MPV_FORMAT_FLAG);
+	mpv_observe_property(m_mpv, 0, "dwidth", MPV_FORMAT_INT64);
+	mpv_observe_property(m_mpv, 0, "dheight", MPV_FORMAT_INT64);
 
 	int result = mpv_initialize(m_mpv);
 	if (result < 0) {
@@ -230,33 +246,34 @@ void VideoPlayer::initialize_mpv() {
 
 void VideoPlayer::mpv_thread() {
 	while (!blur.exiting && !m_thread_exit) {
+		std::unique_lock<std::mutex> lock(m_mutex);
+
+		m_seek_cv.wait_for(lock, std::chrono::milliseconds(50), [this] {
+			return (m_queued_seek.has_value() && !m_is_seeking) || m_thread_exit || blur.exiting;
+		});
+
 		if (!m_mpv || !m_video_loaded) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			continue;
 		}
 
-		{
-			std::unique_lock<std::mutex> lock(m_mutex);
-			if (m_queued_seek) {
-				auto seek = *m_queued_seek;
-				m_queued_seek = {};
+		if (m_queued_seek && !m_is_seeking) {
+			auto seek = *m_queued_seek;
+			m_queued_seek = {};
 
-				if (!m_last_seek || *m_last_seek != seek) {
-					m_last_seek = seek;
-					lock.unlock();
+			if (!m_last_seek || *m_last_seek != seek) {
+				m_is_seeking = true;
+				m_last_seek = seek;
+				lock.unlock();
 
-					std::string flags = "absolute-percent";
-					if (seek.exact)
-						flags += "+exact";
+				std::string flags = "absolute-percent";
+				if (seek.exact)
+					flags += "+exact";
 
-					run_command({ "seek", std::to_string(seek.time * 100), flags });
+				run_command({ "seek", std::to_string(seek.time * 100), flags });
 
-					// mpv_set_property_async(m_mpv, 0, "percent-pos", MPV_FORMAT_DOUBLE, &seek_to);
-				}
+				// mpv_set_property_async(m_mpv, 0, "percent-pos", MPV_FORMAT_DOUBLE, &seek_to);
 			}
 		}
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	}
 }
 
@@ -294,6 +311,7 @@ void VideoPlayer::process_mpv_events() {
 			case MPV_EVENT_START_FILE:
 				u::log("MPV: Starting file");
 				m_video_loaded = false;
+				m_is_seeking = false;
 				break;
 			case MPV_EVENT_FILE_LOADED:
 				u::log("MPV: File loaded");
@@ -305,6 +323,9 @@ void VideoPlayer::process_mpv_events() {
 				break;
 			case MPV_EVENT_PLAYBACK_RESTART:
 				u::log("MPV: Playback restarted");
+				m_is_seeking = false;
+				m_cached_percent_pos = -1.0;
+				m_seek_cv.notify_one();
 				break;
 			case MPV_EVENT_END_FILE: {
 				auto* end_event = static_cast<mpv_event_end_file*>(mp_event->data);
@@ -317,6 +338,34 @@ void VideoPlayer::process_mpv_events() {
 				m_video_loaded = false;
 				break;
 			}
+			case MPV_EVENT_PROPERTY_CHANGE: {
+				auto* prop = static_cast<mpv_event_property*>(mp_event->data);
+
+				if (prop->format == MPV_FORMAT_NONE)
+					break;
+
+				const char* name = prop->name;
+
+				if (std::strcmp(name, "percent-pos") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
+					m_cached_percent_pos = *static_cast<double*>(prop->data);
+				}
+				else if (std::strcmp(name, "duration/full") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
+					m_cached_duration = *static_cast<double*>(prop->data);
+				}
+				else if (std::strcmp(name, "container-fps") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
+					m_cached_fps = *static_cast<double*>(prop->data);
+				}
+				else if (std::strcmp(name, "pause") == 0 && prop->format == MPV_FORMAT_FLAG) {
+					m_cached_pause = *static_cast<int*>(prop->data);
+				}
+				else if (std::strcmp(name, "dwidth") == 0 && prop->format == MPV_FORMAT_INT64) {
+					m_cached_width = *static_cast<int64_t*>(prop->data);
+				}
+				else if (std::strcmp(name, "dheight") == 0 && prop->format == MPV_FORMAT_INT64) {
+					m_cached_height = *static_cast<int64_t*>(prop->data);
+				}
+				break;
+			}
 			default: {
 				u::log("MPV Event: {}", mpv_event_name(mp_event->event_id));
 				break;
@@ -326,19 +375,17 @@ void VideoPlayer::process_mpv_events() {
 }
 
 std::optional<std::pair<int, int>> VideoPlayer::get_video_dimensions() const {
-	// TODO: get this from observer instead?
-
-	auto width = get_property<int64_t>("dwidth", MPV_FORMAT_INT64);
-	auto height = get_property<int64_t>("dheight", MPV_FORMAT_INT64);
-
-	if (width && height)
-		return std::make_pair(static_cast<int>(*width), static_cast<int>(*height));
+	if (m_cached_width > 0 && m_cached_height > 0)
+		return std::make_pair(static_cast<int>(m_cached_width.load()), static_cast<int>(m_cached_height.load()));
 
 	return {};
 }
 
 std::optional<float> VideoPlayer::get_percent_pos() const {
-	return get_property<double>("percent-pos", MPV_FORMAT_DOUBLE);
+	if (m_cached_percent_pos >= 0.0)
+		return static_cast<float>(m_cached_percent_pos.load());
+
+	return {};
 }
 
 bool VideoPlayer::is_video_ready() const {

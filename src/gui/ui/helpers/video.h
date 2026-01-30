@@ -48,22 +48,38 @@ public:
 	[[nodiscard]] std::optional<std::pair<int, int>> get_video_dimensions() const;
 	[[nodiscard]] std::optional<float> get_percent_pos() const;
 
+	[[nodiscard]] bool is_seeking() const {
+		return m_is_seeking;
+	}
+
+	[[nodiscard]] std::optional<double> get_fps() const {
+		if (m_cached_fps >= 0.0)
+			return m_cached_fps.load();
+		return {};
+	}
+
 	[[nodiscard]] std::optional<bool> get_paused() const {
-		return get_property<bool>("pause", MPV_FORMAT_FLAG);
+		return m_cached_pause.load();
 	}
 
 	[[nodiscard]] std::optional<double> get_duration() const {
-		return get_property<double>("duration/full", MPV_FORMAT_DOUBLE);
+		if (m_cached_duration >= 0.0)
+			return m_cached_duration.load();
+		return {};
 	}
 
 	[[nodiscard]] bool is_video_ready() const;
 
-	void seek(float time, bool exact, bool pause) {
-		std::lock_guard<std::mutex> lock(m_mutex);
-		m_queued_seek = Seek{
-			.time = time,
-			.exact = exact,
-		};
+	void seek(float time, bool exact) {
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_queued_seek = Seek{
+				.time = time,
+				.exact = exact,
+			};
+			m_cached_percent_pos = -1.0;
+		}
+		m_seek_cv.notify_one();
 	}
 
 	void set_paused(bool paused) {
@@ -118,11 +134,20 @@ private:
 	bool m_focused_player{};
 
 	std::mutex m_mutex;
+	std::condition_variable m_seek_cv;
 	std::optional<Seek> m_queued_seek;
 	std::optional<Seek> m_last_seek;
 
 	std::thread m_mpv_thread;
 	std::atomic<bool> m_thread_exit{ false };
+	std::atomic<bool> m_is_seeking{ false };
+	std::atomic<bool> m_new_frame_available{ false };
+	std::atomic<double> m_cached_percent_pos{ -1.0 };
+	std::atomic<double> m_cached_duration{ -1.0 };
+	std::atomic<double> m_cached_fps{ -1.0 };
+	std::atomic<bool> m_cached_pause{ true };
+	std::atomic<double> m_cached_width{ -1.0 };
+	std::atomic<double> m_cached_height{ -1.0 };
 
 	float m_end_percent{};
 	float m_start_percent{};
@@ -141,7 +166,7 @@ private:
 
 	void setup_fbo_texture(int w, int h);
 
-	template<typename VariableType>
+	template <typename VariableType>
 	std::optional<VariableType> get_property(const std::string& key, mpv_format variable_format) const {
 		if (!m_mpv || !m_video_loaded)
 			return {};

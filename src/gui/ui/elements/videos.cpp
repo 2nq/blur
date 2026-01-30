@@ -3,6 +3,7 @@
 #include "../keys.h"
 #include "../helpers/video.h"
 #include "../../sdl.h"
+#include "gui/ui/elements/frame_snap.h"
 
 // videos
 constexpr gfx::Size LOADER_SIZE(20, 20);
@@ -273,27 +274,22 @@ namespace {
 		if (!active_video || !active_video->player)
 			return;
 
+		if (active_video->player->is_seeking() || active_video->player->get_queued_seek())
+			return;
+
 		auto progress_percent = active_video->player->get_percent_pos();
 		if (!progress_percent)
 			return;
 
+		float target_percent = *progress_percent / 100.f;
+
+		target_percent = video::frame_snap::snap_percent(
+			target_percent, *active_video->player->get_duration(), *active_video->player->get_fps()
+		);
+
 		auto& progress_anim = element.animations.at(ui::hasher("progress"));
 
-		// the trim handle isn't being grabbed (need a saved preview to return to after letting go) 
-		if (video_data.saved_percent) {
-			// wait for the mpv event to set video progress percent, after that we can resume regular seeking
-			if (*video_data.saved_percent == *progress_percent / 100.f) {
-				video_data.saved_percent = std::nullopt;
-				u::log("reached saved seek position");
-			}
-			else {
-				u::log("waiting for saved seek position to update");
-			}
-
-			return;
-		}
-
-		progress_anim.set_goal(*progress_percent / 100.f);	
+		progress_anim.set_goal(*progress_percent / 100.f);
 	}
 
 	void update_offset(ui::AnimatedElement& element) {
@@ -611,19 +607,13 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				grab.active = true;
 				grab.anim.set_goal(1.f);
 
-				// we just started the grab (grabbing will be set to true after the loop)
-				if (!handle_info.grabbing) {
-					auto progress_percent = active_video->player->get_percent_pos();
-					if (progress_percent)
-						video_data.saved_percent = *progress_percent / 100.f;
-				}
+				float local_mouse_percent = static_cast<float>(keys::mouse_pos.x - rect.x) / static_cast<float>(rect.w);
+				local_mouse_percent = std::clamp(local_mouse_percent, 0.f, 1.0f);
 
-				// compute mouse percent in visible local coords then convert to global timeline percent
-				float local_mouse_percent =
-					(static_cast<float>(keys::mouse_pos.x - rect.x) / static_cast<float>(rect.w));
-				local_mouse_percent = std::clamp(local_mouse_percent, 0.f, 1.f);
-
-				float timeline_percent = visible_start + local_mouse_percent * visible_range;
+				float timeline_percent = visible_start + (local_mouse_percent * visible_range);
+				timeline_percent = video::frame_snap::snap_percent(
+					timeline_percent, *active_video->duration, *active_video->player->get_fps()
+				);
 
 				timeline_percent = std::clamp(
 					timeline_percent, grab.min_ptr ? *grab.min_ptr : 0.f, grab.max_ptr ? *grab.max_ptr : 1.f
@@ -632,13 +622,16 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				*grab.var_ptr = timeline_percent;
 				grab.update_fn(*active_video, timeline_percent);
 
-				active_video->player->seek(timeline_percent, true, false);
+				bool just_pressed = keys::is_mouse_pressed(SDL_BUTTON_LEFT);
+				active_video->player->seek(timeline_percent, just_pressed);
+
+				auto& grab_progress_anim = element.animations.at(ui::hasher("progress"));
+				grab_progress_anim.current = timeline_percent;
+				grab_progress_anim.set_goal(timeline_percent);
 			}
 			else {
-				// we just let go of the grab (grabbing will be set to false after the loop)
-				if (handle_info.grabbing && video_data.saved_percent)
-					active_video->player->seek(*video_data.saved_percent, true, false);
-
+				float seek_percent = *grab.var_ptr;
+				active_video->player->seek(seek_percent, true);
 				active_video->player->set_paused(true);
 				ui::reset_active_element();
 			}
@@ -785,20 +778,24 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			// convert to timeline coordinates using zoom window
 			float timeline_time = zoom_start + (local_mouse_percent * zoom_range);
 
+			if (auto fps = active_video->player->get_fps())
+				timeline_time = video::frame_snap::snap_time(timeline_time, *fps);
+
 			// convert to normalized percent for player
 			float timeline_percent = timeline_time / (*active_video->duration);
 			timeline_percent = std::clamp(timeline_percent, 0.f, 1.f);
 
-			active_video->player->seek(timeline_percent, true, false);
+			bool just_pressed = keys::is_mouse_pressed(SDL_BUTTON_LEFT);
+			active_video->player->seek(timeline_percent, just_pressed);
 
-			if (seeking_anim.current == 0.f) // new seek, start from current. otherwise smoothly animate from last seek
-				seek_anim.current = progress_anim.current;
-
+			progress_anim.current = timeline_percent;
+			progress_anim.set_goal(timeline_percent);
 			seek_anim.set_goal(timeline_percent);
 
 			updated = true;
 		}
 		else {
+			active_video->player->seek(seek_anim.goal, true);
 			ui::reset_active_element();
 		}
 	}
