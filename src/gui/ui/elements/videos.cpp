@@ -815,6 +815,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 		active_video->player->set_end(current_percent);
 		updated = true;
 	}
+
+	// update anims
 	if (!active_video->player->get_queued_seek())
 		seeking_anim.set_goal(0.f);
 
@@ -843,6 +845,7 @@ bool update_videos_actual(const ui::Container& container, ui::AnimatedElement& e
 	auto& offset_anim = element.animations.at(ui::hasher("video_offset"));
 	auto rect = get_video_rect(element.element->rect.origin(), active_video->size, offset_anim.current);
 
+	// clicking on videos
 	std::vector<gfx::Rect> rects = get_video_rects(element, rect);
 
 	for (auto [i, video] : u::enumerate(video_data.videos)) {
