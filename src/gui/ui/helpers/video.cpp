@@ -28,8 +28,34 @@ VideoPlayer::~VideoPlayer() {
 }
 
 void VideoPlayer::handle_key_press(SDL_Keycode key) {
-	if (key == SDLK_SPACE) {
-		run_command_async({ "cycle", "pause" });
+	switch (key) {
+		case SDLK_SPACE: {
+			run_command_async({ "cycle", "pause" });
+			break;
+		}
+
+		case SDLK_LEFT: {
+			run_command_async({ "seek", "-5" });
+			break;
+		}
+
+		case SDLK_RIGHT: {
+			run_command_async({ "seek", "5" });
+			break;
+		}
+
+		case SDLK_COMMA: {
+			run_command_async({ "frame-back-step" });
+			break;
+		}
+
+		case SDLK_PERIOD: {
+			run_command_async({ "frame-step" });
+			break;
+		}
+
+		default:
+			break;
 	}
 }
 
