@@ -103,7 +103,13 @@ bool VideoPlayer::render(int w, int h) {
 		return false;
 	}
 
+	bool size_changed = (w != m_current_width && h != m_current_height);
 	setup_fbo_texture(w, h);
+
+	if (!m_new_frame_available && !size_changed)
+		return true;
+
+	m_new_frame_available = false;
 
 	// save current opengl state
 	GLint prev_fbo = 0;
@@ -147,6 +153,7 @@ void VideoPlayer::handle_mpv_event(const SDL_Event& event, bool& redraw) {
 		uint64_t flags = mpv_render_context_update(m_mpv_gl);
 		if (flags & MPV_RENDER_UPDATE_FRAME) {
 			redraw = true;
+			m_new_frame_available = true;
 		}
 	}
 
