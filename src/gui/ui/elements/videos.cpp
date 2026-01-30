@@ -632,7 +632,6 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			else {
 				float seek_percent = *grab.var_ptr;
 				active_video->player->seek(seek_percent, true);
-				active_video->player->set_paused(true);
 				ui::reset_active_element();
 			}
 		}
