@@ -797,7 +797,7 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	}
 
 	// hotkeys for start/end cut
-	float current_percent = progress_anim.current;
+	float current_percent = progress_anim.goal;
 
 	// [/g = start
 	if (keys::is_key_pressed(SDL_SCANCODE_LEFTBRACKET) || keys::is_key_pressed(SDL_SCANCODE_G)) {
