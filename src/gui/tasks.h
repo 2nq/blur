@@ -4,6 +4,7 @@ namespace tasks {
 	inline int finished_renders = 0;
 
 	struct PendingVideo {
+		size_t video_id;
 		std::filesystem::path video_path;
 		std::optional<u::VideoInfo> video_info;
 		float start = 0.f;

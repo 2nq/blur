@@ -118,8 +118,11 @@ void tasks::add_files(const std::vector<std::filesystem::path>& path_strs) {
 			);
 		}
 
+		static size_t next_video_id = 0;
+
 		pending_videos.push_back(
 			std::make_shared<PendingVideo>(PendingVideo{
+				.video_id = next_video_id++,
 				.video_path = path,
 			})
 		);
@@ -129,33 +132,25 @@ void tasks::add_files(const std::vector<std::filesystem::path>& path_strs) {
 void tasks::process_pending_files() {
 	std::unique_lock<std::mutex> lock(pending_videos_mutex);
 
-	// Find first video without info
 	auto it = std::ranges::find_if(pending_videos, [](const auto& pv) {
 		return !pv->video_info.has_value();
 	});
 
 	if (it == pending_videos.end()) {
-		return; // No videos need processing
+		return;
 	}
 
-	auto video_path = (*it)->video_path; // Copy the path
+	auto video_path = (*it)->video_path;
 	auto index = std::ranges::distance(pending_videos.begin(), it);
-	lock.unlock(); // Release lock while doing expensive I/O
 
-	// Get video info (this is the slow operation)
 	auto video_info = u::get_video_info(video_path);
 
-	// Lock again to update the result
-	lock.lock();
-
-	// Make sure the vector hasn't been modified in a way that invalidates our index
 	if (index < pending_videos.size() && pending_videos[index]->video_path == video_path) {
 		if (!video_info.has_video_stream) {
 			gui::components::notifications::add(
 				std::format("File is not a valid video or is unreadable: {}", video_path.filename()),
 				ui::NotificationType::NOTIF_ERROR
 			);
-			// Remove invalid video from queue
 			pending_videos.erase(pending_videos.begin() + index);
 		}
 		else {
