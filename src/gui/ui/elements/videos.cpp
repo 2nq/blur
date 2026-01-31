@@ -4,6 +4,7 @@
 #include "../helpers/video.h"
 #include "../../sdl.h"
 #include "frame_snap.h"
+#include "gui/tasks.h"
 
 // videos
 constexpr gfx::Size LOADER_SIZE(20, 20);
@@ -798,18 +799,23 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	// hotkeys for start/end cut
 	float current_percent = progress_anim.current;
 
-	// [ = start
-	if (keys::is_key_pressed(SDL_SCANCODE_LEFTBRACKET)) {
+	// [/g = start
+	if (keys::is_key_pressed(SDL_SCANCODE_LEFTBRACKET) || keys::is_key_pressed(SDL_SCANCODE_G)) {
 		*video_data.start = std::clamp(current_percent, 0.f, video_data.end ? *video_data.end : 1.f);
 		active_video->player->set_start(current_percent);
 		updated = true;
 	}
 
-	// ] = end
-	if (keys::is_key_pressed(SDL_SCANCODE_RIGHTBRACKET)) {
+	// ]/h = end
+	if (keys::is_key_pressed(SDL_SCANCODE_RIGHTBRACKET) || keys::is_key_pressed(SDL_SCANCODE_H)) {
 		*video_data.end = std::clamp(current_percent, video_data.start ? *video_data.start : 0.f, 1.f);
 		active_video->player->set_end(current_percent);
 		updated = true;
+	}
+
+	// r = start rendering
+	if (keys::is_key_pressed(SDL_SCANCODE_R)) {
+		tasks::start_pending_videos();
 	}
 
 	// update anims
