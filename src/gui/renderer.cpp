@@ -13,6 +13,7 @@
 
 #include "components/main.h"
 #include "components/notifications.h"
+#include "components/test.h"
 #include "components/configs/configs.h"
 
 #define DEBUG_RENDER 0
@@ -137,6 +138,14 @@ bool gui::renderer::redraw_window(bool rendered_last, bool want_to_render) {
 	ui::reset_container(notification_container, sdl::window, notification_container_rect, 6, {});
 
 	switch (screen) {
+		case Screens::TEST: {
+			components::test::screen(main_container, delta_time);
+
+			ui::add_button("back button", nav_container, "Back", fonts::dejavu, [] {
+				screen = Screens::MAIN;
+			});
+			break;
+		}
 		case Screens::MAIN: {
 			components::configs::loaded_config = false;
 
@@ -145,6 +154,11 @@ bool gui::renderer::redraw_window(bool rendered_last, bool want_to_render) {
 			if (initialisation_res) {
 				switch (main_screen) {
 					case components::main::MainScreen::HOME: {
+#ifdef _DEBUG
+						ui::add_button("test button", nav_container, "Test", fonts::dejavu, [] {
+							screen = Screens::TEST;
+						});
+#endif
 						break;
 					}
 					case components::main::MainScreen::PENDING: {

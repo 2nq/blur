@@ -12,6 +12,7 @@ namespace gui::renderer {
 	inline constexpr float FPS_SMOOTHING = 0.95f;
 
 	enum class Screens : uint8_t {
+		TEST,
 		MAIN,
 		CONFIG
 	};
