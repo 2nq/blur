@@ -450,6 +450,7 @@ namespace u {
 
 	struct VideoInfo {
 		bool has_video_stream = false;
+		bool has_audio_stream = false;
 		std::optional<std::string> color_range;
 		std::optional<std::string> pix_fmt;
 		std::optional<std::string> color_space;

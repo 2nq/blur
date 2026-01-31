@@ -4,6 +4,7 @@ from vapoursynth import core
 import sys
 import json
 from pathlib import Path
+from fractions import Fraction
 
 # add blur.py folder to path so it can reference scripts
 sys.path.insert(1, str(Path(__file__).parent))
@@ -27,6 +28,8 @@ fps_num = vars().get("fps_num", -1)
 fps_den = vars().get("fps_den", -1)
 color_range = vars().get("color_range", "")
 is_full_color_range = color_range == "pc"
+
+has_audio = vars().get("has_audio", "true") == "true"
 
 # validate some settings
 svp_interpolation_algorithm = u.coalesce(
@@ -63,16 +66,6 @@ else:
         fpsnum=fps_num if fps_num != -1 else None,
         fpsden=fps_den if fps_den != -1 else None,
     )
-
-try:
-    audio = core.bs.AudioSource(
-        source=video_path,
-        cachemode=0,
-    )
-except Exception as e:
-    print("failed to load audio", e)
-    audio = core.std.BlankAudio(samplerate=44100, length=44100*video.num_frames)
-
 
 # input timescale
 if settings["timescale"]:
@@ -299,31 +292,39 @@ end = float(vars().get("end", 1.0))
 start = max(0.0, min(1.0, start))
 end = max(0.0, min(1.0, end))
 
-# trim video and audio
-v_start = 0
+# trimming
+v_start = None
 v_end = None
-
-a_start = 0
-a_end = None
-
-fps = video.fps.numerator / video.fps.denominator
 
 if start != 0:
     v_start = int(video.num_frames * start)
 
-    # TODO MR: make sure this is exactly synced
-    time_start = v_start / fps
-    a_start = int(time_start * audio.sample_rate)
-
 if end != 1:
     v_end = int(video.num_frames * end)
 
-    # TODO MR: make sure this is exactly synced
-    time_end = v_end / fps
-    a_end = int(time_end * audio.sample_rate)
-
 video = video[v_start:v_end]
-audio = audio[a_start:a_end]
-
 video.set_output(0)
-audio.set_output(1)
+
+# audio
+if has_audio:
+    # TODO MR: how's this handle multiple audio streams...
+    audio = core.bs.AudioSource(source=video_path, cachemode=0)
+
+    a_start = None
+    a_end = None
+
+    # trimming
+    fps = Fraction(video.fps.numerator, video.fps.denominator)
+
+    if v_start is not None:
+        # TODO MR: make sure this is exactly synced
+        time_start = Fraction(v_start) / fps
+        a_start = int(time_start * audio.sample_rate)
+
+    if v_end is not None:
+        # TODO MR: make sure this is exactly synced
+        time_end = Fraction(v_end) / fps
+        a_end = int(time_end * audio.sample_rate)
+
+    audio = audio[a_start:a_end]
+    audio.set_output(1)

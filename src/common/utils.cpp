@@ -357,6 +357,35 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 
 	c.wait();
 
+	// second ffprobe run for audio (maybe not the 'fastest' way of doing this, but cleaner than doing it all at once)
+	bp::ipstream audio_pipe_stream;
+
+	auto audio_c = u::run_command(
+		blur.ffprobe_path,
+		{
+			"-v",
+			"error",
+			"-select_streams",
+			"a:0",
+			"-show_entries",
+			"stream=codec_type",
+			"-of",
+			"default=noprint_wrappers=1",
+			u::path_to_string(path),
+		},
+		bp::std_out > audio_pipe_stream,
+		bp::std_err.null()
+	);
+
+	while (audio_pipe_stream && std::getline(audio_pipe_stream, line)) {
+		boost::algorithm::trim(line);
+		if (line.find("codec_type=audio") != std::string::npos) {
+			info.has_audio_stream = true;
+		}
+	}
+
+	audio_c.wait();
+
 	// 1. It must have a video stream
 	// 2. Either it has a non-zero duration or it's an animated format
 	// Static images will typically have duration=0 or N/A
