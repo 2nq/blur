@@ -288,8 +288,9 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 			"-select_streams",
 			"v:0", // only want to analyse first video stream
 			"-show_entries",
-			"stream=codec_type,codec_name,duration,color_range,sample_rate,r_frame_rate,pix_fmt,color_space,color_"
-			"transfer,color_primaries",
+			// clang-format off
+			"stream=codec_type,duration,color_range,sample_rate,r_frame_rate,pix_fmt,color_space,color_transfer,color_primaries",
+			// clang-format on
 			"-show_entries",
 			"format=duration",
 			"-of",
@@ -302,18 +303,14 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 
 	VideoInfo info;
 
-	bool has_video_stream = false;
-	std::string codec_name;
-
 	std::string line;
 	while (pipe_stream && std::getline(pipe_stream, line)) {
 		boost::algorithm::trim(line);
 
 		if (line.find("codec_type=video") != std::string::npos) {
-			has_video_stream = true;
-		}
-		else if (line.find("codec_name=") != std::string::npos) {
-			codec_name = line.substr(line.find('=') + 1);
+			// note: this also counts images as videos, so blur can be used on images.
+			// i'll call it a feature, not a bug.
+			info.has_video_stream = true;
 		}
 		else if (line.find("duration=") != std::string::npos) {
 			try {
@@ -384,12 +381,6 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 	}
 
 	audio_c.wait();
-
-	// 1. It must have a video stream
-	// 2. Either it has a non-zero duration or it's an animated format
-	// Static images will typically have duration=0 or N/A
-	bool is_animated_format = u::contains(codec_name, "gif") || u::contains(codec_name, "webp");
-	info.has_video_stream = has_video_stream && (info.duration > 0.1 || is_animated_format);
 
 	if (info.sample_rate == -1) {
 		// todo: throw?
