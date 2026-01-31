@@ -14,6 +14,8 @@ void config_app::create(const std::filesystem::path& filepath, const GlobalAppSe
 
 	output << "\n";
 	output << "- gui" << "\n";
+	output << "window width: " << settings.gui_width << "\n";
+	output << "window height: " << settings.gui_height << "\n";
 	output << "blur amount tied to fps: " << (settings.blur_amount_tied_to_fps ? "true" : "false") << "\n";
 
 	output << "\n";
@@ -47,6 +49,8 @@ GlobalAppSettings config_app::parse(const std::filesystem::path& config_filepath
 	config_base::extract_config_string(config_map, "gpu type (nvidia/amd/intel)", settings.gpu_type);
 	config_base::extract_config_value(config_map, "rife gpu number", settings.rife_gpu_index);
 
+	config_base::extract_config_value(config_map, "window width", settings.gui_width);
+	config_base::extract_config_value(config_map, "window height", settings.gui_height);
 	config_base::extract_config_value(config_map, "blur amount tied to fps", settings.blur_amount_tied_to_fps);
 
 	config_base::extract_config_value(

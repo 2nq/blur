@@ -6,6 +6,8 @@ struct GlobalAppSettings {
 	std::string gpu_type;
 	int rife_gpu_index = -1;
 
+	int gui_width = 591;
+	int gui_height = 381;
 	bool blur_amount_tied_to_fps = true;
 
 	bool render_success_notifications = false;
