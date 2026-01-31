@@ -450,6 +450,7 @@ namespace u {
 
 	struct VideoInfo {
 		bool has_video_stream = false;
+		bool has_audio_stream = false;
 		std::optional<std::string> color_range;
 		std::optional<std::string> pix_fmt;
 		std::optional<std::string> color_space;
@@ -459,10 +460,13 @@ namespace u {
 		int fps_num = -1;
 		int fps_den = -1;
 		float duration = 0.f;
+
+		bool operator==(const VideoInfo& other) const = default;
 	};
 
 	VideoInfo get_video_info(const std::filesystem::path& path);
 	std::vector<int16_t> get_video_waveform(const std::filesystem::path& path, int target_width);
+	int16_t get_audio_percentile_peak(const std::vector<int16_t>& samples, float percentile);
 
 	struct EncodingDevice {
 		std::string type;   // "nvidia", "amd", "intel", "mac"

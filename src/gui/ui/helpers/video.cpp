@@ -1,5 +1,7 @@
 #include "video.h"
 
+const int SEEK_SECS = 3;
+
 VideoPlayer::~VideoPlayer() {
 	m_thread_exit = true;
 	if (m_mpv_thread.joinable())
@@ -28,8 +30,34 @@ VideoPlayer::~VideoPlayer() {
 }
 
 void VideoPlayer::handle_key_press(SDL_Keycode key) {
-	if (key == SDLK_SPACE) {
-		run_command_async({ "cycle", "pause" });
+	switch (key) {
+		case SDLK_SPACE: {
+			cycle_paused();
+			break;
+		}
+
+		case SDLK_LEFT: {
+			run_command_async({ "seek", std::format("-{}", SEEK_SECS) });
+			break;
+		}
+
+		case SDLK_RIGHT: {
+			run_command_async({ "seek", std::format("{}", SEEK_SECS) });
+			break;
+		}
+
+		case SDLK_COMMA: {
+			run_command_async({ "frame-back-step" });
+			break;
+		}
+
+		case SDLK_PERIOD: {
+			run_command_async({ "frame-step" });
+			break;
+		}
+
+		default:
+			break;
 	}
 }
 
@@ -354,6 +382,11 @@ void VideoPlayer::process_mpv_events() {
 				}
 				else if (std::strcmp(name, "duration/full") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
 					m_cached_duration = *static_cast<double*>(prop->data);
+
+					// note: this might not be the 'correct' place to do this, but it needs to be called once
+					// as early as possible & requires the duration to be loaded.
+					// since duration is set here and it should only happen once, seems good enough.
+					update_playback_range();
 				}
 				else if (std::strcmp(name, "container-fps") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
 					m_cached_fps = *static_cast<double*>(prop->data);

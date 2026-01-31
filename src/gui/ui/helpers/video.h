@@ -45,8 +45,19 @@ public:
 
 	void handle_mpv_event(const SDL_Event& event, bool& redraw);
 
-	[[nodiscard]] std::optional<std::pair<int, int>> get_video_dimensions() const;
-	[[nodiscard]] std::optional<float> get_percent_pos() const;
+	[[nodiscard]] std::optional<std::pair<int, int>> get_video_dimensions() const {
+		if (m_cached_width > 0 && m_cached_height > 0)
+			return std::make_pair(static_cast<int>(m_cached_width.load()), static_cast<int>(m_cached_height.load()));
+
+		return {};
+	}
+
+	[[nodiscard]] std::optional<float> get_percent_pos() const {
+		if (m_cached_percent_pos >= 0.0)
+			return static_cast<float>(m_cached_percent_pos.load());
+
+		return {};
+	}
 
 	[[nodiscard]] bool is_seeking() const {
 		return m_is_seeking;
@@ -68,7 +79,9 @@ public:
 		return {};
 	}
 
-	[[nodiscard]] bool is_video_ready() const;
+	[[nodiscard]] bool is_video_ready() const {
+		return m_video_loaded;
+	}
 
 	void seek(float time, bool exact) {
 		{
@@ -86,16 +99,36 @@ public:
 		run_command_async({ "set", "pause", paused ? "yes" : "no" });
 	}
 
-	void resume() {
-		run_command_async({ "set", "pause", "no" });
+	void cycle_paused() {
+		run_command_async({ "cycle", "pause" });
+	}
+
+	void set_playback_range(float start, float end) {
+		run_command_async({ "set", "ab-loop-a", std::to_string(start) });
+		run_command_async({ "set", "ab-loop-b", std::to_string(end) });
+	}
+
+	void reset_playback_range() {
+		run_command_async({ "del", "ab-loop-a" });
+		run_command_async({ "del", "ab-loop-b" });
+	}
+
+	void update_playback_range() {
+		auto duration = get_duration();
+		if (duration)
+			set_playback_range(m_start_percent * *duration, m_end_percent * *duration);
 	}
 
 	void set_end(float percent) {
 		m_end_percent = percent;
+
+		update_playback_range();
 	}
 
 	void set_start(float percent) {
 		m_start_percent = percent;
+
+		update_playback_range();
 	}
 
 	[[nodiscard]] bool is_focused_player() const {
@@ -148,8 +181,8 @@ private:
 	std::atomic<double> m_cached_width{ -1.0 };
 	std::atomic<double> m_cached_height{ -1.0 };
 
-	float m_end_percent{};
-	float m_start_percent{};
+	float m_start_percent = 0.f;
+	float m_end_percent = 1.f;
 
 	void initialize_mpv();
 

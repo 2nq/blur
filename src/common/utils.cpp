@@ -289,8 +289,7 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 			"v:0", // only want to analyse first video stream
 			"-show_entries",
 			"stream=codec_type,codec_name,duration,color_range,sample_rate,r_frame_rate,pix_fmt,color_space,color_"
-			"transfer,"
-			"color_primaries",
+			"transfer,color_primaries",
 			"-show_entries",
 			"format=duration",
 			"-of",
@@ -356,6 +355,35 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 	}
 
 	c.wait();
+
+	// second ffprobe run for audio (maybe not the 'fastest' way of doing this, but cleaner than doing it all at once)
+	bp::ipstream audio_pipe_stream;
+
+	auto audio_c = u::run_command(
+		blur.ffprobe_path,
+		{
+			"-v",
+			"error",
+			"-select_streams",
+			"a:0",
+			"-show_entries",
+			"stream=codec_type",
+			"-of",
+			"default=noprint_wrappers=1",
+			u::path_to_string(path),
+		},
+		bp::std_out > audio_pipe_stream,
+		bp::std_err.null()
+	);
+
+	while (audio_pipe_stream && std::getline(audio_pipe_stream, line)) {
+		boost::algorithm::trim(line);
+		if (line.find("codec_type=audio") != std::string::npos) {
+			info.has_audio_stream = true;
+		}
+	}
+
+	audio_c.wait();
 
 	// 1. It must have a video stream
 	// 2. Either it has a non-zero duration or it's an animated format
@@ -427,6 +455,25 @@ std::vector<int16_t> u::get_video_waveform(const std::filesystem::path& path, in
 	}
 
 	return downsampled;
+}
+
+int16_t u::get_audio_percentile_peak(const std::vector<int16_t>& samples, float percentile) {
+	if (samples.empty())
+		return 1;
+
+	// sort samples from quietest->loudest
+	std::vector<int16_t> abs_samples;
+	abs_samples.reserve(samples.size());
+	for (int16_t sample : samples) {
+		abs_samples.push_back(std::abs(sample));
+	}
+
+	std::ranges::sort(abs_samples);
+
+	// get xth percentile amplitude
+	auto idx = static_cast<size_t>(percentile * abs_samples.size());
+	idx = std::min(idx, abs_samples.size() - 1);
+	return std::max(abs_samples[idx], static_cast<int16_t>(1));
 }
 
 bool u::test_hardware_device(const std::string& device_type) {

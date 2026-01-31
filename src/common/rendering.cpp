@@ -345,13 +345,15 @@ tl::expected<rendering::detail::PipelineResult, std::string> rendering::detail::
 		auto vspipe_process = u::run_command(blur.vspipe_path, commands.vspipe_video, env, bp::std_err > vspipe_stderr);
 
 		bp::child vspipe_audio_process;
+		if (audio) {
 #ifdef _WIN32
-		vspipe_audio_process =
-			u::run_command(blur.vspipe_path, commands.vspipe_audio, env, bp::std_err > vspipe_audio_stderr);
+			vspipe_audio_process =
+				u::run_command(blur.vspipe_path, commands.vspipe_audio, env, bp::std_err > vspipe_audio_stderr);
 #else
-		vspipe_audio_process =
-			u::run_command(blur.vspipe_path, commands.vspipe_audio, env, bp::std_err > vspipe_audio_stderr);
+			vspipe_audio_process =
+				u::run_command(blur.vspipe_path, commands.vspipe_audio, env, bp::std_err > vspipe_audio_stderr);
 #endif
+		}
 
 		std::ostringstream vspipe_errors;
 		std::ostringstream vspipe_audio_errors;
@@ -651,33 +653,60 @@ tl::expected<rendering::RenderResult, std::string> rendering::detail::render_vid
 			std::format("start={}", start),
 			"-a",
 			std::format("end={}", end),
+			"-a",
+			std::format("has_audio={}", video_info.has_audio_stream),
 		}
 	);
 
-	auto vspipe_audio_args = detail::build_vspipe_args(input_path, *merged_settings, false);
-	vspipe_audio_args.insert(
-		vspipe_audio_args.end() - 2,
-		{
-			// insert before script path and "-"
-			"-a",
-			std::format("fps_num={}", video_info.fps_num),
-			"-a",
-			std::format("fps_den={}", video_info.fps_den),
-			"-a",
-			"color_range=" + (video_info.color_range ? *video_info.color_range : "undefined"),
-			"-a",
-			std::format("start={}", start),
-			"-a",
-			std::format("end={}", end),
-		}
-	);
+	std::vector<std::string> vspipe_audio_args;
+
+	if (video_info.has_audio_stream) {
+		vspipe_audio_args = detail::build_vspipe_args(input_path, *merged_settings, false);
+		vspipe_audio_args.insert(
+			vspipe_audio_args.end() - 2,
+			{
+				// insert before script path and "-"
+				"-a",
+				std::format("fps_num={}", video_info.fps_num),
+				"-a",
+				std::format("fps_den={}", video_info.fps_den),
+				"-a",
+				"color_range=" + (video_info.color_range ? *video_info.color_range : "undefined"),
+				"-a",
+				std::format("start={}", start),
+				"-a",
+				std::format("end={}", end),
+			}
+		);
+	}
 
 	// build ffmpeg command
-	// TODO MR: dont pipe audio if input doesnt have audio stream
 	std::vector<std::string> ffmpeg_args = {
-		"-loglevel",    "error", "-hide_banner", "-stats", "-y",  "-fflags", "+genpts", "-i",
-		"{video_pipe}", "-i",    "{audio_pipe}", "-map",   "0:v", "-map",    "1:a",
+		"-loglevel", "error", "-hide_banner", "-stats", "-y", "-fflags", "+genpts", "-i", "{video_pipe}",
 	};
+
+	if (video_info.has_audio_stream) {
+		ffmpeg_args.insert(
+			ffmpeg_args.end(),
+			{
+				"-i",
+				"{audio_pipe}",
+				"-map",
+				"0:v",
+				"-map",
+				"1:a",
+			}
+		);
+	}
+	else {
+		ffmpeg_args.insert(
+			ffmpeg_args.end(),
+			{
+				"-map",
+				"0:v",
+			}
+		);
+	}
 
 	// add color metadata
 	auto color_args = detail::build_color_metadata_args(video_info);
@@ -728,7 +757,9 @@ tl::expected<rendering::RenderResult, std::string> rendering::detail::render_vid
 		.vspipe_will_stop_early = false,
 	};
 
-	auto pipeline_result = detail::execute_pipeline(commands, state, settings.advanced.debug, true, progress_callback);
+	auto pipeline_result = detail::execute_pipeline(
+		commands, state, settings.advanced.debug, video_info.has_audio_stream, progress_callback
+	);
 	if (!pipeline_result)
 		return tl::unexpected(pipeline_result.error());
 

@@ -27,31 +27,31 @@ constexpr float TRACK_MAX_ZOOM_SECS = 0.6f;
 constexpr size_t WAVEFORM_SAMPLES_PER_SEC = 80;
 
 namespace {
-	std::unordered_map<std::string, std::shared_ptr<VideoPlayer>> video_players;
+	std::unordered_map<size_t, std::shared_ptr<VideoPlayer>> video_players;
 
 	// std::mutex thumbnail_mutex;
 	// std::unordered_map<std::string, std::shared_ptr<render::Texture>> thumbnails;
 
-	tl::expected<std::shared_ptr<VideoPlayer>, std::string> get_or_add_player(const std::filesystem::path& video_path) {
-		auto key = video_path.string();
-
+	tl::expected<std::shared_ptr<VideoPlayer>, std::string> get_or_add_player(
+		const size_t video_id, const std::filesystem::path& video_path
+	) {
 		try {
-			auto it = video_players.find(key);
+			auto it = video_players.find(video_id);
 
 			if (it == video_players.end()) {
 				auto player = std::make_shared<VideoPlayer>();
-				player->load_file(key);
+				player->load_file(video_path);
 
-				u::log("loaded video from {}", key);
+				u::log("loaded video {} from {}", video_id, video_path);
 
-				auto insert_result = video_players.insert({ key, player });
+				auto insert_result = video_players.insert({ video_id, player });
 				it = insert_result.first;
 			}
 
 			return it->second;
 		}
 		catch (const std::exception& e) {
-			u::log_error("failed to load video from {} ({})", key, e.what());
+			u::log_error("failed to load video from {} ({})", video_id, e.what());
 			return tl::unexpected("failed to load video");
 		}
 	}
@@ -313,7 +313,7 @@ namespace {
 
 		// deinitialise zoom on video switch
 		if (element.animations.contains(track_zoom_end_hash)) {
-			if (!video_data.last_active_video || *video_data.last_active_video != active_video.path) {
+			if (!video_data.last_active_video || *video_data.last_active_video != active_video.data.path) {
 				element.animations.erase(track_zoom_start_hash);
 				element.animations.erase(track_zoom_end_hash);
 
@@ -326,7 +326,7 @@ namespace {
 			element.animations.emplace(track_zoom_start_hash, ui::AnimationState(30.f, 0.f));
 			element.animations.emplace(track_zoom_end_hash, ui::AnimationState(30.f, *active_video.duration));
 
-			video_data.last_active_video = active_video.path;
+			video_data.last_active_video = active_video.data.path;
 
 			DEBUG_LOG("initialised zoom");
 		}
@@ -629,6 +629,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				grab_progress_anim.set_goal(timeline_percent);
 			}
 			else {
+				float seek_percent = *grab.var_ptr;
+				active_video->player->seek(seek_percent, true);
 				ui::reset_active_element();
 			}
 		}
@@ -793,6 +795,24 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 		}
 	}
 
+	// hotkeys for start/end cut
+	float current_percent = progress_anim.current;
+
+	// [ = start
+	if (keys::is_key_pressed(SDL_SCANCODE_LEFTBRACKET)) {
+		*video_data.start = std::clamp(current_percent, 0.f, video_data.end ? *video_data.end : 1.f);
+		active_video->player->set_start(current_percent);
+		updated = true;
+	}
+
+	// ] = end
+	if (keys::is_key_pressed(SDL_SCANCODE_RIGHTBRACKET)) {
+		*video_data.end = std::clamp(current_percent, video_data.start ? *video_data.start : 0.f, 1.f);
+		active_video->player->set_end(current_percent);
+		updated = true;
+	}
+
+	// update anims
 	if (!active_video->player->get_queued_seek())
 		seeking_anim.set_goal(0.f);
 
@@ -821,22 +841,30 @@ bool update_videos_actual(const ui::Container& container, ui::AnimatedElement& e
 	auto& offset_anim = element.animations.at(ui::hasher("video_offset"));
 	auto rect = get_video_rect(element.element->rect.origin(), active_video->size, offset_anim.current);
 
+	// clicking on videos
 	std::vector<gfx::Rect> rects = get_video_rects(element, rect);
 
 	for (auto [i, video] : u::enumerate(video_data.videos)) {
 		if (rects[i].contains(keys::mouse_pos)) {
+			ui::set_cursor(SDL_SYSTEM_CURSOR_POINTER);
+
 			if (keys::is_mouse_down()) {
 				keys::on_mouse_press_handled(SDL_BUTTON_LEFT);
 
-				if (active_video->player)
-					active_video->player->set_paused(true);
+				if (i == *video_data.index) { // same video, pause/unpause
+					video.player->cycle_paused();
+				}
+				else { // different video, switch to it
+					if (active_video->player)
+						active_video->player->set_paused(true);
 
-				*video_data.index = i;
+					*video_data.index = i;
 
-				// Reset focus state on all players
-				for (auto [j, video] : u::enumerate(video_data.videos)) {
-					if (video.player) {
-						video.player->set_focused_player(j == i);
+					// Reset focus state on all players
+					for (auto [j, video] : u::enumerate(video_data.videos)) {
+						if (video.player) {
+							video.player->set_focused_player(j == i);
+						}
 					}
 				}
 			}
@@ -861,14 +889,14 @@ void ui::remove_videos(AnimatedElement& element) {
 	const auto& video_data = std::get<VideoElementData>(element.element->data);
 
 	for (const auto& video : video_data.videos) {
-		auto video_player_it = video_players.find(video.path.string());
+		auto video_player_it = video_players.find(video.data.video_id);
 
 		if (video_player_it != video_players.end()) {
 			video_players.erase(video_player_it);
-			u::log("Removed video player for {}", video.path.string());
+			u::log("Removed video player for {}", video.data.path.string());
 		}
 		else {
-			u::log("No video player found for {}", video.path.string());
+			u::log("No video player found for {}", video.data.path.string());
 		}
 	}
 }
@@ -887,14 +915,13 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 	std::vector<VideoElementData::Video> videos;
 
 	for (auto [i, ui_video] : u::enumerate(ui_videos)) {
-		auto player_res = get_or_add_player(ui_video.path);
+		auto player_res = get_or_add_player(ui_video.video_id, ui_video.path);
 		auto player = *player_res;
 		auto size = get_size_from_dimensions(container, player);
 
 		VideoElementData::Video video{
-			.path = ui_video.path,
+			.data = ui_video,
 			.size = size,
-			.video_info = ui_video.video_info,
 			.player = player,
 		};
 

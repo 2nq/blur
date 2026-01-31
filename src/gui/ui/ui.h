@@ -132,8 +132,11 @@ namespace ui {
 	};
 
 	struct UIVideo {
+		size_t video_id;
 		std::filesystem::path path;
 		std::optional<u::VideoInfo> video_info;
+
+		bool operator==(const UIVideo& other) const = default;
 	};
 
 	struct VideoElementData {
@@ -143,15 +146,14 @@ namespace ui {
 		};
 
 		struct Video {
-			std::filesystem::path path;
+			UIVideo data;
 			gfx::Size size;
-			std::optional<u::VideoInfo> video_info;
 			std::shared_ptr<VideoPlayer> player;
 			std::optional<double> duration;
 			std::optional<StoredWaveform*> waveform;
 
 			bool operator==(const Video& other) const {
-				return path == other.path && size == other.size && player == other.player &&
+				return data == other.data && size == other.size && player == other.player &&
 				       duration == other.duration && waveform == other.waveform;
 			}
 		};

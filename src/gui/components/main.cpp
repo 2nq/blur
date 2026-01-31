@@ -226,9 +226,11 @@ void main::render_pending(ui::Container& container, const std::vector<std::share
 
 	std::vector<ui::UIVideo> ui_videos;
 
+	ui_videos.reserve(pending.size());
 	for (const auto& pv : pending) {
 		ui_videos.push_back(
 			{
+				.video_id = pv->video_id,
 				.path = pv->video_path,
 				.video_info = pv->video_info,
 			}
