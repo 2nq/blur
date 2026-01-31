@@ -1,6 +1,7 @@
 # dev
 /lib
 old
+/mpv
 
 # tests
 tests/assets/*

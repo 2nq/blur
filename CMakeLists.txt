@@ -151,8 +151,22 @@ target_include_directories(blur PRIVATE ${PROJECT_SOURCE_DIR}/dependencies/stb)
 find_package(MPV REQUIRED)
 
 target_include_directories(blur PRIVATE ${MPV_INCLUDE_DIRS})
-target_link_libraries(blur PRIVATE ${MPV_LIBRARY})
-target_link_directories(blur PRIVATE ${MPV_LIBRARY_DIRS})
+
+if(WIN32)
+  target_link_libraries(blur PRIVATE ${MPV_LIBRARY})
+
+  if(MPV_DLL)
+    add_custom_command(TARGET blur POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${MPV_DLL}"
+        "$<TARGET_FILE_DIR:blur>/"
+      COMMENT "Copying mpv DLL to output directory"
+    )
+  endif()
+else()
+  target_link_libraries(blur PRIVATE ${MPV_LIBRARY})
+  target_link_directories(blur PRIVATE ${MPV_LIBRARY_DIRS})
+endif()
 
 target_link_libraries(
   blur PRIVATE blur-common SDL3::SDL3 SDL3_image::SDL3_image Freetype::Freetype

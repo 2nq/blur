@@ -34,15 +34,44 @@ find_path(
   HINTS ${PC_MPV_INCLUDEDIR} ${PC_MPV_INCLUDE_DIRS} # Unused for MPV but anyway
   DOC "MPV include directory")
 
-#
-# Look for the libraries
-#
-set(_MPV_LIBRARY_NAMES mpv)
-if(PC_MPV_LIBRARIES)
-  set(_MPV_LIBRARY_NAMES ${PC_MPV_LIBRARIES})
-endif(PC_MPV_LIBRARIES)
+if(WIN32)
+  # don't ask me why this is needed
+  unset(MPV_LIBRARY CACHE)
 
-if(NOT WIN32)
+  find_file(
+    MPV_LIBRARY
+    NAMES libmpv.dll.a
+    PATHS
+      ${CMAKE_SOURCE_DIR}/mpv
+      ${CMAKE_SOURCE_DIR}/mpv/lib
+      $ENV{MPV_DIR}
+      $ENV{MPV_DIR}/lib
+    NO_DEFAULT_PATH
+    DOC "MPV import library")
+
+  find_file(
+    MPV_DLL
+    NAMES libmpv-2.dll
+    PATHS
+      ${CMAKE_SOURCE_DIR}/mpv
+      ${CMAKE_SOURCE_DIR}/mpv/bin
+      $ENV{MPV_DIR}
+      $ENV{MPV_DIR}/bin
+    NO_DEFAULT_PATH
+    DOC "MPV runtime DLL")
+
+  if(MPV_LIBRARY)
+    get_filename_component(_MPV_LIBRARY_DIR ${MPV_LIBRARY} DIRECTORY)
+  endif()
+else()
+  #
+  # Look for the libraries
+  #
+  set(_MPV_LIBRARY_NAMES mpv)
+  if(PC_MPV_LIBRARIES)
+    set(_MPV_LIBRARY_NAMES ${PC_MPV_LIBRARIES})
+  endif(PC_MPV_LIBRARIES)
+
   foreach(l ${_MPV_LIBRARY_NAMES})
     find_library(
       MPV_LIBRARY_${l}
@@ -54,7 +83,7 @@ if(NOT WIN32)
 
   get_filename_component(_MPV_LIBRARY_DIR ${MPV_LIBRARY_mpv} PATH)
   mark_as_advanced(MPV_LIBRARY)
-endif(NOT WIN32)
+endif()
 
 set(MPV_LIBRARY_DIRS _MPV_LIBRARY_DIR)
 list(REMOVE_DUPLICATES MPV_LIBRARY_DIRS)

@@ -197,4 +197,23 @@ foreach ($model in $modelDownloads) {
     Download-ModelFiles -BaseUrl $model.BaseUrl -ModelName $model.ModelName -FileList $model.FileList
 }
 
+# Download mpv (https://github.com/jellyfin/jellyfin-desktop/blob/master/.github/workflows/build-windows.yml)
+$mpvVersion = "20260118-git-468d34c"
+$mpvArch = "x86_64-v3"
+
+$mpvDir = Join-Path $PWD "mpv"
+New-Item -ItemType Directory -Force -Path $mpvDir | Out-Null
+
+# Main mpv download
+$mpvUrl = "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-$mpvArch-$mpvVersion.7z/download"
+$mpvArchive = Join-Path $PWD "mpv.7z"
+Download-File -Url $mpvUrl -OutFile $mpvArchive
+& 7z x $mpvArchive -o"$mpvDir" -y
+
+# Generate .def and move DLLs
+Set-Location "mpv"
+C:\msys64\mingw64\bin\gendef.exe libmpv-2.dll
+Move-Item -Path "libmpv-2.dll" -Destination "libmpv-2.dll"
+Move-Item -Path "libmpv-2.def" -Destination "mpv.def"
+
 Write-Host "Done"
