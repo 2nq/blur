@@ -63,11 +63,17 @@ tl::expected<std::filesystem::path, std::string> rendering::detail::create_temp_
 	return *temp_path / std::format("output.{}", extension);
 }
 
-std::filesystem::path rendering::detail::build_output_filename(
+tl::expected<std::filesystem::path, std::string> rendering::detail::build_output_filename(
 	const std::filesystem::path& input_path, const BlurSettings& settings, const GlobalAppSettings& app_settings
 ) {
 	auto output_folder = input_path.parent_path() / app_settings.output_prefix;
-	std::filesystem::create_directories(output_folder);
+
+	try {
+		std::filesystem::create_directories(output_folder);
+	}
+	catch (const std::filesystem::filesystem_error& e) {
+		return tl::unexpected(fmt::format("Failed to create output directory: {}", e.what()));
+	}
 
 	std::string base_name = std::format("{} - blur", input_path.stem());
 
@@ -620,7 +626,18 @@ tl::expected<rendering::RenderResult, std::string> rendering::detail::render_vid
 	if (!merged_settings)
 		return tl::unexpected(merged_settings.error());
 
-	auto output_path = output_path_override.value_or(detail::build_output_filename(input_path, settings, app_settings));
+	std::filesystem::path output_path;
+	if (output_path_override) {
+		output_path = *output_path_override;
+	}
+	else {
+		auto output_res = detail::build_output_filename(input_path, settings, app_settings);
+		if (!output_res) {
+			return tl::unexpected(output_res.error());
+		}
+
+		output_path = *output_res;
+	}
 
 	u::log("Rendering '{}'", input_path.stem());
 

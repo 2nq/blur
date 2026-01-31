@@ -165,7 +165,7 @@ namespace rendering {
 			const std::string& prefix, const std::string& extension = "jpg"
 		);
 
-		std::filesystem::path build_output_filename(
+		tl::expected<std::filesystem::path, std::string> build_output_filename(
 			const std::filesystem::path& input_path, const BlurSettings& settings, const GlobalAppSettings& app_settings
 		);
 
