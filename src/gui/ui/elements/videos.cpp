@@ -874,19 +874,8 @@ bool ui::update_videos(const Container& container, AnimatedElement& element) {
 }
 
 void ui::remove_videos(AnimatedElement& element) {
-	const auto& video_data = std::get<VideoElementData>(element.element->data);
-
-	for (const auto& video : video_data.videos) {
-		auto video_player_it = video_players.find(video.data.video_id);
-
-		if (video_player_it != video_players.end()) {
-			video_players.erase(video_player_it);
-			u::log("Removed video player {} for {}", video.data.video_id, video.data.path.string());
-		}
-		else {
-			u::log("Video player {} for {} not found", video.data.video_id, video.data.path.string());
-		}
-	}
+	video_players.clear();
+	u::log("Removed all videos");
 }
 
 std::optional<ui::AnimatedElement*> ui::add_videos(
