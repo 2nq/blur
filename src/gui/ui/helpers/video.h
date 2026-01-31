@@ -86,16 +86,33 @@ public:
 		run_command_async({ "set", "pause", paused ? "yes" : "no" });
 	}
 
-	void resume() {
-		run_command_async({ "set", "pause", "no" });
+
+	void set_playback_range(float start, float end) {
+		run_command_async({ "set", "ab-loop-a", std::to_string(start) });
+		run_command_async({ "set", "ab-loop-b", std::to_string(end) });
+	}
+
+	void reset_playback_range() {
+		run_command_async({ "del", "ab-loop-a" });
+		run_command_async({ "del", "ab-loop-b" });
+	}
+
+	void update_playback_range() {
+		auto duration = get_duration();
+		if (duration)
+			set_playback_range(m_start_percent * *duration, m_end_percent * *duration);
 	}
 
 	void set_end(float percent) {
 		m_end_percent = percent;
+
+		update_playback_range();
 	}
 
 	void set_start(float percent) {
 		m_start_percent = percent;
+
+		update_playback_range();
 	}
 
 	[[nodiscard]] bool is_focused_player() const {
@@ -149,8 +166,8 @@ private:
 	std::atomic<double> m_cached_width{ -1.0 };
 	std::atomic<double> m_cached_height{ -1.0 };
 
-	float m_end_percent{};
-	float m_start_percent{};
+	float m_start_percent = 0.f;
+	float m_end_percent = 1.f;
 
 	void initialize_mpv();
 

@@ -386,6 +386,11 @@ void VideoPlayer::process_mpv_events() {
 				}
 				else if (std::strcmp(name, "duration/full") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
 					m_cached_duration = *static_cast<double*>(prop->data);
+
+					// note: this might not be the 'correct' place to do this, but it needs to be called once
+					// as early as possible & requires the duration to be loaded.
+					// since duration is set here and it should only happen once, seems good enough.
+					update_playback_range();
 				}
 				else if (std::strcmp(name, "container-fps") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
 					m_cached_fps = *static_cast<double*>(prop->data);
