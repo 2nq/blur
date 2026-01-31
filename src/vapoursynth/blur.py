@@ -307,7 +307,7 @@ video.set_output(0)
 
 # audio
 if has_audio:
-    # TODO MR: how's this handle multiple audio streams...
+    # TODO: multiple audio stream support?
     audio = core.bs.AudioSource(source=video_path, cachemode=0)
 
     a_start = None
