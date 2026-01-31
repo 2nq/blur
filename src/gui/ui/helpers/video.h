@@ -45,8 +45,19 @@ public:
 
 	void handle_mpv_event(const SDL_Event& event, bool& redraw);
 
-	[[nodiscard]] std::optional<std::pair<int, int>> get_video_dimensions() const;
-	[[nodiscard]] std::optional<float> get_percent_pos() const;
+	[[nodiscard]] std::optional<std::pair<int, int>> get_video_dimensions() const {
+		if (m_cached_width > 0 && m_cached_height > 0)
+			return std::make_pair(static_cast<int>(m_cached_width.load()), static_cast<int>(m_cached_height.load()));
+
+		return {};
+	}
+
+	[[nodiscard]] std::optional<float> get_percent_pos() const {
+		if (m_cached_percent_pos >= 0.0)
+			return static_cast<float>(m_cached_percent_pos.load());
+
+		return {};
+	}
 
 	[[nodiscard]] bool is_seeking() const {
 		return m_is_seeking;
@@ -68,7 +79,9 @@ public:
 		return {};
 	}
 
-	[[nodiscard]] bool is_video_ready() const;
+	[[nodiscard]] bool is_video_ready() const {
+		return m_video_loaded;
+	}
 
 	void seek(float time, bool exact) {
 		{
@@ -186,7 +199,7 @@ private:
 
 	void setup_fbo_texture(int w, int h);
 
-	template <typename VariableType>
+	template<typename VariableType>
 	std::optional<VariableType> get_property(const std::string& key, mpv_format variable_format) const {
 		if (!m_mpv || !m_video_loaded)
 			return {};
