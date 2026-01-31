@@ -52,7 +52,7 @@ void VideoPlayer::handle_key_press(SDL_Keycode key) {
 		}
 
 		case SDLK_PERIOD: {
-			run_command_async({ "frame-step" });
+			run_command_async({ "frame-step", "1", "seek" });
 			break;
 		}
 
