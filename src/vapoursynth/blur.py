@@ -293,14 +293,18 @@ start = max(0.0, min(1.0, start))
 end = max(0.0, min(1.0, end))
 
 # trimming
-v_start = None
-v_end = None
+v_start = 0
+v_end = video.num_frames
 
 if start != 0:
     v_start = int(video.num_frames * start)
 
 if end != 1:
     v_end = int(video.num_frames * end)
+
+# safety, need to have at least one frame
+if v_end <= v_start:
+    v_end = v_start + 1
 
 video = video[v_start:v_end]
 video.set_output(0)
