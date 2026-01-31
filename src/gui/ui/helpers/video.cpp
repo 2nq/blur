@@ -190,7 +190,7 @@ void VideoPlayer::handle_mpv_event(const SDL_Event& event, bool& redraw, bool sh
 	}
 }
 
-void VideoPlayer::initialize_mpv() {
+void VideoPlayer::initialize_mpv(float volume) {
 	m_mpv = mpv_create();
 	if (!m_mpv) {
 		throw std::runtime_error("MPV context creation failed");
@@ -206,6 +206,7 @@ void VideoPlayer::initialize_mpv() {
 	mpv_set_option_string(m_mpv, "profile", "fast");
 	mpv_set_option_string(m_mpv, "keep-open", "yes"); // dont close when finished
 	mpv_set_option_string(m_mpv, "pause", "yes");
+	mpv_set_option_string(m_mpv, "volume", std::format("{:.2f}", volume).c_str());
 	// mpv_set_option_string(m_mpv, "mute", "yes");
 	//
 	mpv_observe_property(m_mpv, 0, "percent-pos", MPV_FORMAT_DOUBLE);

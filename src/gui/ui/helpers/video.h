@@ -14,7 +14,7 @@ struct Seek {
 
 class VideoPlayer {
 public:
-	VideoPlayer()
+	VideoPlayer(float volume)
 		: m_wakeup_on_mpv_render_update(SDL_RegisterEvents(1)), m_wakeup_on_mpv_events(SDL_RegisterEvents(1)) {
 		if (m_wakeup_on_mpv_render_update == static_cast<Uint32>(-1) ||
 		    m_wakeup_on_mpv_events == static_cast<Uint32>(-1))
@@ -22,7 +22,7 @@ public:
 			throw std::runtime_error("Could not register SDL events");
 		}
 
-		initialize_mpv();
+		initialize_mpv(volume);
 		gen_fbo_texture();
 	}
 
@@ -191,7 +191,7 @@ private:
 	float m_start_percent = 0.f;
 	float m_end_percent = 1.f;
 
-	void initialize_mpv();
+	void initialize_mpv(float volume);
 
 	void mpv_thread();
 

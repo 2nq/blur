@@ -237,7 +237,11 @@ void main::render_pending(ui::Container& container, const std::vector<std::share
 		);
 	}
 
-	ui::add_videos("test video", container, ui_videos, pending_index, pending_video->start, pending_video->end);
+	auto app_config = config_app::get_app_config();
+
+	float volume = app_config.preview_volume; // todo: make a gui element for controlling it? idk
+
+	ui::add_videos("test video", container, ui_videos, pending_index, pending_video->start, pending_video->end, volume);
 }
 
 void main::render_home(ui::Container& container) {

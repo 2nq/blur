@@ -596,7 +596,8 @@ namespace ui {
 		const std::vector<UIVideo>& ui_videos,
 		size_t& index,
 		float& start,
-		float& end
+		float& end,
+		float& volume
 	);
 
 	AnimatedElement* add_button(

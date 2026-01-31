@@ -19,6 +19,10 @@ void config_app::create(const std::filesystem::path& filepath, const GlobalAppSe
 	output << "blur amount tied to fps: " << (settings.blur_amount_tied_to_fps ? "true" : "false") << "\n";
 
 	output << "\n";
+	output << "- preview" << "\n";
+	output << "preview volume: " << settings.preview_volume << "\n";
+
+	output << "\n";
 	output << "- desktop notifications" << "\n";
 	output << "render success notifications: " << (settings.render_success_notifications ? "true" : "false") << "\n";
 	output << "render failure notifications: " << (settings.render_failure_notifications ? "true" : "false") << "\n";
@@ -52,6 +56,8 @@ GlobalAppSettings config_app::parse(const std::filesystem::path& config_filepath
 	config_base::extract_config_value(config_map, "window width", settings.gui_width);
 	config_base::extract_config_value(config_map, "window height", settings.gui_height);
 	config_base::extract_config_value(config_map, "blur amount tied to fps", settings.blur_amount_tied_to_fps);
+
+	config_base::extract_config_value(config_map, "preview volume", settings.preview_volume);
 
 	config_base::extract_config_value(
 		config_map, "render success notifications", settings.render_success_notifications

@@ -10,6 +10,8 @@ struct GlobalAppSettings {
 	int gui_height = 381;
 	bool blur_amount_tied_to_fps = true;
 
+	int preview_volume = 70;
+
 	bool render_success_notifications = false;
 	bool render_failure_notifications = false;
 

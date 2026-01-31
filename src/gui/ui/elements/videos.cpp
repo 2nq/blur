@@ -35,13 +35,13 @@ namespace {
 	// std::unordered_map<std::string, std::shared_ptr<render::Texture>> thumbnails;
 
 	tl::expected<std::shared_ptr<VideoPlayer>, std::string> get_or_add_player(
-		const size_t video_id, const std::filesystem::path& video_path
+		const size_t video_id, const std::filesystem::path& video_path, float volume
 	) {
 		try {
 			auto it = video_players.find(video_id);
 
 			if (it == video_players.end()) {
-				auto player = std::make_shared<VideoPlayer>();
+				auto player = std::make_shared<VideoPlayer>(volume);
 				player->load_file(video_path);
 
 				u::log("loaded video {} from {}", video_id, video_path);
@@ -895,7 +895,8 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 	const std::vector<UIVideo>& ui_videos,
 	size_t& index,
 	float& start,
-	float& end
+	float& end,
+	float& volume
 ) {
 	if (ui_videos.empty())
 		return {};
@@ -903,7 +904,7 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 	std::vector<VideoElementData::Video> videos;
 
 	for (auto [i, ui_video] : u::enumerate(ui_videos)) {
-		auto player_res = get_or_add_player(ui_video.video_id, ui_video.path);
+		auto player_res = get_or_add_player(ui_video.video_id, ui_video.path, volume);
 		auto player = *player_res;
 		auto size = get_size_from_dimensions(container, player);
 
