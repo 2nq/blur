@@ -812,11 +812,6 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 		updated = true;
 	}
 
-	// r = start rendering
-	if (keys::is_key_pressed(SDL_SCANCODE_R)) {
-		tasks::start_pending_videos();
-	}
-
 	// update anims
 	if (!active_video->player->get_queued_seek())
 		seeking_anim.set_goal(0.f);

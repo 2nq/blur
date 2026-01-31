@@ -154,10 +154,20 @@ bool gui::renderer::redraw_window(bool rendered_last, bool want_to_render) {
 							tasks::start_pending_videos();
 						});
 
+						// r = start rendering
+						if (keys::is_key_pressed(SDL_SCANCODE_R)) {
+							tasks::start_pending_videos();
+						}
+
 						ui::set_next_same_line(nav_container);
 						ui::add_button("cancel button", nav_container, "Cancel", fonts::dejavu, [] {
 							tasks::cancel_pending();
 						});
+
+						// escape = cancel
+						if (keys::is_key_pressed(SDL_SCANCODE_ESCAPE)) {
+							tasks::cancel_pending();
+						}
 
 						ui::set_next_same_line(nav_container);
 						components::main::open_files_button(nav_container, "Add files");
