@@ -335,16 +335,16 @@ namespace {
 
 void ui::handle_videos_event(const SDL_Event& event, bool& to_render) {
 	for (auto& [id, player] : video_players) {
-		if (player->is_focused_player() || !player->is_video_ready()) {
-			switch (event.type) {
-				case SDL_EVENT_KEY_DOWN:
+		switch (event.type) {
+			case SDL_EVENT_KEY_DOWN:
+				if (player->is_focused_player()) {
 					player->handle_key_press(event.key.key);
-					break;
+				}
+				break;
 
-				default:
-					player->handle_mpv_event(event, to_render);
-					break;
-			}
+			default:
+				player->handle_mpv_event(event, to_render);
+				break;
 		}
 	}
 }
