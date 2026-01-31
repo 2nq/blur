@@ -81,37 +81,19 @@ bool render::init(SDL_Window* window, const SDL_GLContext& context) {
 	if (!imgui.init(window, context))
 		return false;
 
-	// TODO: Consider using ImFontGlyphRangesBuilder to build glyph ranges from textual data.
-
-	// ImFontGlyphRangesBuilder builder;
-	// builder.AddRanges(imgui.io->Fonts->GetGlyphRangesDefault());
-	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesGreek());
-	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesKorean());
-	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesJapanese());
-	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesChineseSimplifiedCommon());
-	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesCyrillic());
-	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesThai());
-	// // builder.AddRanges(imgui.io->Fonts->GetGlyphRangesVietnamese());
-	// ImVector<ImWchar> custom_ranges;
-	// builder.BuildRanges(&custom_ranges);
-
-	// ^ TODO: RANDOM CRASH TODO REFACTOR  IMPORTANT FIX  YES
-	const auto* ranges = imgui.io->Fonts->GetGlyphRangesDefault();
-
 	ImFontConfig font_cfg;
-	font_cfg.RasterizerDensity = SDL_GetWindowPixelDensity(window); // TODO PORT: update when changing screen
 
 	// init fonts
-	if (!fonts::dejavu.init(DEJAVU_SANS_COMPRESSED_DATA, 13.f, &font_cfg, ranges))
+	if (!fonts::dejavu.init(DEJAVU_SANS_COMPRESSED_DATA, 13.f, &font_cfg))
 		return false;
 
-	if (!fonts::header_font.init(EB_GARAMOND_COMPRESSED_DATA, 30.f, &font_cfg, ranges))
+	if (!fonts::header_font.init(EB_GARAMOND_COMPRESSED_DATA, 30.f, &font_cfg))
 		return false;
 
-	if (!fonts::smaller_header_font.init(EB_GARAMOND_COMPRESSED_DATA, 18.f, &font_cfg, ranges))
+	if (!fonts::smaller_header_font.init(EB_GARAMOND_COMPRESSED_DATA, 18.f, &font_cfg))
 		return false;
 
-	if (!fonts::icons.init(ICONS_COMPRESSED_DATA, 14.f, &font_cfg, ranges))
+	if (!fonts::icons.init(ICONS_COMPRESSED_DATA, 14.f, &font_cfg))
 		return false;
 
 	return true;
@@ -456,7 +438,7 @@ void render::text(
 	if (!font)
 		return;
 
-	ImGui::PushFont(font.im_font());
+	ImGui::PushFont(font.im_font(), font.im_font()->LegacySize);
 
 	int vtx_idx_begin = imgui.drawlist->_VtxCurrentIdx;
 
