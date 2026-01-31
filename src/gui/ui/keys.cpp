@@ -67,8 +67,8 @@ bool keys::process_event(const SDL_Event& event) {
 				// start of a scroll, see which direction it's (primarily) in
 				scroll_is_horizontal = std::abs(event.wheel.x) > std::abs(event.wheel.y);
 
-			scroll_delta = scroll_is_horizontal ? 0 : -event.wheel.y;
-			scroll_x_delta = scroll_is_horizontal ? -event.wheel.x : 0;
+			scroll_delta += scroll_is_horizontal ? 0 : -event.wheel.y;
+			scroll_x_delta += scroll_is_horizontal ? -event.wheel.x : 0;
 			// todo: better trackpad scrolling (https://github.com/libsdl-org/SDL/pull/5382)
 			return true;
 		}

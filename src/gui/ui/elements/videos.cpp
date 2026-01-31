@@ -24,6 +24,7 @@ constexpr gfx::Color GRABS_COLOR(175, 175, 175);
 constexpr gfx::Color GRABS_ACTIVE_COLOR(100, 100, 100);
 constexpr gfx::Size GRAB_CLICK_EXPANSION(15, 5);
 
+constexpr float TRACK_ZOOM_SPEED = 1.4f;
 constexpr float TRACK_MAX_ZOOM_SECS = 0.6f;
 constexpr size_t WAVEFORM_SAMPLES_PER_SEC = 80;
 
@@ -689,27 +690,26 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			float current_end = track_zoom_end_anim.goal;
 			float current_range = current_end - current_start;
 
-			// Calculate zoom factor (positive = zoom in, negative = zoom out)
-			float zoom_factor = keys::scroll_delta;
+			float zoom_factor = powf(TRACK_ZOOM_SPEED, keys::scroll_delta);
+
 			float new_range = std::clamp(
-				current_range * (1.f - zoom_factor),
-				TRACK_MAX_ZOOM_SECS, // confusing, since min = max
-				float(*active_video->duration)
+				current_range * zoom_factor,
+				TRACK_MAX_ZOOM_SECS,           // minimum visible range (most zoomed in)
+				float(*active_video->duration) // maximum range (fully zoomed out)
 			);
 
-			// Mouse position relative to rect (0..1)
+			// get mouse position relative to rect (0..1)
 			float mouse_local = (float(keys::mouse_pos.x - rect.x) / rect.w);
 			mouse_local = std::clamp(mouse_local, 0.f, 1.f);
 
-			// Mouse position in timeline coordinates
+			// get mouse position in timeline coordinates
 			float mouse_timeline = current_start + (mouse_local * current_range);
 
-			// Calculate new start/end to keep mouse position fixed
-			float range_diff = new_range - current_range;
-			float new_start = current_start - (mouse_local * range_diff);
+			// calculate new start/end
+			float new_start = mouse_timeline - (mouse_local * new_range);
 			float new_end = new_start + new_range;
 
-			// Clamp to valid timeline bounds
+			// clamp to valid timeline bounds
 			if (new_start < 0.f) {
 				new_start = 0.f;
 				new_end = new_start + new_range;
@@ -719,7 +719,6 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				new_start = new_end - new_range;
 			}
 
-			// Apply the new zoom window with smooth animation
 			track_zoom_start_anim.set_goal(new_start);
 			track_zoom_end_anim.set_goal(new_end);
 
