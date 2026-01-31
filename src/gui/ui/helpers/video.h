@@ -136,7 +136,6 @@ private:
 	std::mutex m_mutex;
 	std::condition_variable m_seek_cv;
 	std::optional<Seek> m_queued_seek;
-	std::optional<Seek> m_last_seek;
 
 	std::thread m_mpv_thread;
 	std::atomic<bool> m_thread_exit{ false };
@@ -166,7 +165,7 @@ private:
 
 	void setup_fbo_texture(int w, int h);
 
-	template <typename VariableType>
+	template<typename VariableType>
 	std::optional<VariableType> get_property(const std::string& key, mpv_format variable_format) const {
 		if (!m_mpv || !m_video_loaded)
 			return {};

@@ -74,8 +74,8 @@ void configs::config_preview(ui::Container& container) {
 
 			auto res = rendering::render_frame(sample_video_path, local_settings, local_app_settings, state->state);
 
-			if (state == render_states.back())
-			{ // todo: this should be correct right? any cases where this doesn't work?
+			if (state ==
+			    render_states.back()) { // todo: this should be correct right? any cases where this doesn't work?
 				loading = false;
 
 				if (res) {

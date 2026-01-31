@@ -622,17 +622,13 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				*grab.var_ptr = timeline_percent;
 				grab.update_fn(*active_video, timeline_percent);
 
-				bool just_pressed = keys::is_mouse_pressed(SDL_BUTTON_LEFT);
-				active_video->player->seek(timeline_percent, just_pressed);
+				active_video->player->seek(timeline_percent, true);
 
 				auto& grab_progress_anim = element.animations.at(ui::hasher("progress"));
 				grab_progress_anim.current = timeline_percent;
 				grab_progress_anim.set_goal(timeline_percent);
 			}
 			else {
-				float seek_percent = *grab.var_ptr;
-				active_video->player->seek(seek_percent, true);
-				active_video->player->set_paused(true);
 				ui::reset_active_element();
 			}
 		}
@@ -785,17 +781,14 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			float timeline_percent = timeline_time / (*active_video->duration);
 			timeline_percent = std::clamp(timeline_percent, 0.f, 1.f);
 
-			bool just_pressed = keys::is_mouse_pressed(SDL_BUTTON_LEFT);
-			active_video->player->seek(timeline_percent, just_pressed);
+			active_video->player->seek(timeline_percent, true);
 
-			progress_anim.current = timeline_percent;
 			progress_anim.set_goal(timeline_percent);
 			seek_anim.set_goal(timeline_percent);
 
 			updated = true;
 		}
 		else {
-			active_video->player->seek(seek_anim.goal, true);
 			ui::reset_active_element();
 		}
 	}

@@ -265,21 +265,17 @@ void VideoPlayer::mpv_thread() {
 
 		if (m_queued_seek && !m_is_seeking) {
 			auto seek = *m_queued_seek;
-			m_queued_seek = {};
+			m_queued_seek.reset();
+			m_is_seeking = true;
+			lock.unlock();
 
-			if (!m_last_seek || *m_last_seek != seek) {
-				m_is_seeking = true;
-				m_last_seek = seek;
-				lock.unlock();
+			std::string flags = "absolute-percent";
+			if (seek.exact)
+				flags += "+exact";
 
-				std::string flags = "absolute-percent";
-				if (seek.exact)
-					flags += "+exact";
+			run_command({ "seek", std::to_string(seek.time * 100), flags });
 
-				run_command({ "seek", std::to_string(seek.time * 100), flags });
-
-				// mpv_set_property_async(m_mpv, 0, "percent-pos", MPV_FORMAT_DOUBLE, &seek_to);
-			}
+			// mpv_set_property_async(m_mpv, 0, "percent-pos", MPV_FORMAT_DOUBLE, &seek_to);
 		}
 	}
 }
@@ -384,6 +380,12 @@ void VideoPlayer::process_mpv_events() {
 std::optional<std::pair<int, int>> VideoPlayer::get_video_dimensions() const {
 	if (m_cached_width > 0 && m_cached_height > 0)
 		return std::make_pair(static_cast<int>(m_cached_width.load()), static_cast<int>(m_cached_height.load()));
+	else {
+		auto width = get_property<int64_t>("dwidth", MPV_FORMAT_INT64);
+		auto height = get_property<int64_t>("dheight", MPV_FORMAT_INT64);
+		if (width && height)
+			return std::make_pair(static_cast<int>(*width), static_cast<int>(*height));
+	}
 
 	return {};
 }
