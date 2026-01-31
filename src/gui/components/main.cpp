@@ -215,6 +215,8 @@ void main::render_pending(ui::Container& container, const std::vector<std::share
 		render_title_text = std::format("{} ({}/{})", render_title_text, pending_index + 1, queue_size);
 	}
 
+	container.push_element_gap(4);
+
 	ui::add_text(
 		std::format("video {} name text", pending_index),
 		container,
@@ -223,6 +225,8 @@ void main::render_pending(ui::Container& container, const std::vector<std::share
 		fonts::smaller_header_font,
 		FONT_CENTERED_X | FONT_OUTLINE
 	);
+
+	container.pop_element_gap();
 
 	std::vector<ui::UIVideo> ui_videos;
 
