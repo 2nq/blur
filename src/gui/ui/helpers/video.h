@@ -86,6 +86,9 @@ public:
 		run_command_async({ "set", "pause", paused ? "yes" : "no" });
 	}
 
+	void cycle_paused() {
+		run_command_async({ "cycle", "pause" });
+	}
 
 	void set_playback_range(float start, float end) {
 		run_command_async({ "set", "ab-loop-a", std::to_string(start) });

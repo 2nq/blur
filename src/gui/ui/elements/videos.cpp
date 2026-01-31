@@ -856,9 +856,7 @@ bool update_videos_actual(const ui::Container& container, ui::AnimatedElement& e
 				keys::on_mouse_press_handled(SDL_BUTTON_LEFT);
 
 				if (i == *video_data.index) { // same video, pause/unpause
-					auto paused = video.player->get_paused();
-					if (paused)
-						video.player->set_paused(!*paused);
+					video.player->cycle_paused();
 				}
 				else { // different video, switch to it
 					if (active_video->player)

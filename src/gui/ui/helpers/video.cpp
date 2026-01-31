@@ -32,7 +32,7 @@ VideoPlayer::~VideoPlayer() {
 void VideoPlayer::handle_key_press(SDL_Keycode key) {
 	switch (key) {
 		case SDLK_SPACE: {
-			run_command_async({ "cycle", "pause" });
+			cycle_paused();
 			break;
 		}
 
