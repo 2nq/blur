@@ -409,27 +409,3 @@ void VideoPlayer::process_mpv_events() {
 		}
 	}
 }
-
-std::optional<std::pair<int, int>> VideoPlayer::get_video_dimensions() const {
-	if (m_cached_width > 0 && m_cached_height > 0)
-		return std::make_pair(static_cast<int>(m_cached_width.load()), static_cast<int>(m_cached_height.load()));
-	else {
-		auto width = get_property<int64_t>("dwidth", MPV_FORMAT_INT64);
-		auto height = get_property<int64_t>("dheight", MPV_FORMAT_INT64);
-		if (width && height)
-			return std::make_pair(static_cast<int>(*width), static_cast<int>(*height));
-	}
-
-	return {};
-}
-
-std::optional<float> VideoPlayer::get_percent_pos() const {
-	if (m_cached_percent_pos >= 0.0)
-		return static_cast<float>(m_cached_percent_pos.load());
-
-	return {};
-}
-
-bool VideoPlayer::is_video_ready() const {
-	return m_video_loaded;
-}
