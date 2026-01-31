@@ -289,8 +289,7 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 			"v:0", // only want to analyse first video stream
 			"-show_entries",
 			"stream=codec_type,codec_name,duration,color_range,sample_rate,r_frame_rate,pix_fmt,color_space,color_"
-			"transfer,"
-			"color_primaries",
+			"transfer,color_primaries",
 			"-show_entries",
 			"format=duration",
 			"-of",
