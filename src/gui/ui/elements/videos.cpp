@@ -824,18 +824,6 @@ bool update_videos_actual(const ui::Container& container, ui::AnimatedElement& e
 
 	const auto* active_video = get_active_video(element);
 
-	if (active_video && active_video->player) {
-		// TODO MR: idk if you even need this, been working fine without (it was bugged)
-		while (!ui::event_queue.empty()) {
-			auto& event = ui::event_queue.front();
-
-			bool blah;
-			active_video->player->handle_mpv_event(event, blah);
-
-			ui::event_queue.erase(ui::event_queue.begin());
-		}
-	}
-
 	auto track_rect = get_track_rect(element.element->rect.origin(), active_video->size);
 
 	auto& offset_anim = element.animations.at(ui::hasher("video_offset"));
