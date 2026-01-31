@@ -176,8 +176,8 @@ bool VideoPlayer::render(int w, int h) {
 	return true;
 }
 
-void VideoPlayer::handle_mpv_event(const SDL_Event& event, bool& redraw) {
-	if (event.type == m_wakeup_on_mpv_render_update) {
+void VideoPlayer::handle_mpv_event(const SDL_Event& event, bool& redraw, bool should_render) {
+	if (should_render && event.type == m_wakeup_on_mpv_render_update) {
 		uint64_t flags = mpv_render_context_update(m_mpv_gl);
 		if (flags & MPV_RENDER_UPDATE_FRAME) {
 			redraw = true;

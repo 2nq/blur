@@ -343,7 +343,7 @@ void ui::handle_videos_event(const SDL_Event& event, bool& to_render) {
 				break;
 
 			default:
-				player->handle_mpv_event(event, to_render);
+				player->handle_mpv_event(event, to_render, player->is_focused_player());
 				break;
 		}
 	}

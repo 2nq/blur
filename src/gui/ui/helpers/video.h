@@ -43,7 +43,7 @@ public:
 		return m_tex;
 	}
 
-	void handle_mpv_event(const SDL_Event& event, bool& redraw);
+	void handle_mpv_event(const SDL_Event& event, bool& redraw, bool should_render);
 
 	[[nodiscard]] std::optional<std::pair<int, int>> get_video_dimensions() const {
 		if (m_cached_width > 0 && m_cached_height > 0)
