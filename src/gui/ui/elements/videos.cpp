@@ -44,7 +44,7 @@ namespace {
 				auto player = std::make_shared<VideoPlayer>(volume);
 				player->load_file(video_path);
 
-				u::log("loaded video {} from {}", video_id, video_path);
+				u::log("Created video player {} from {}", video_id, video_path);
 
 				auto insert_result = video_players.insert({ video_id, player });
 				it = insert_result.first;
@@ -881,10 +881,10 @@ void ui::remove_videos(AnimatedElement& element) {
 
 		if (video_player_it != video_players.end()) {
 			video_players.erase(video_player_it);
-			u::log("Removed video player for {}", video.data.path.string());
+			u::log("Removed video player {} for {}", video.data.video_id, video.data.path.string());
 		}
 		else {
-			u::log("No video player found for {}", video.data.path.string());
+			u::log("Video player {} for {} not found", video.data.video_id, video.data.path.string());
 		}
 	}
 }
