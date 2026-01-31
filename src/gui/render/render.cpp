@@ -9,7 +9,7 @@
 #include <algorithm>
 
 #include "../fonts/dejavu_sans.h"
-#include "../fonts/eb_garamond.h"
+#include "../fonts/nv_garamond.h"
 #include "../fonts/icons.h"
 
 namespace {
@@ -87,10 +87,10 @@ bool render::init(SDL_Window* window, const SDL_GLContext& context) {
 	if (!fonts::dejavu.init(DEJAVU_SANS_COMPRESSED_DATA, 13.f, &font_cfg))
 		return false;
 
-	if (!fonts::header_font.init(EB_GARAMOND_COMPRESSED_DATA, 30.f, &font_cfg))
+	if (!fonts::header_font.init(NV_GARAMOND_COMPRESSED_DATA, 32.f, &font_cfg))
 		return false;
 
-	if (!fonts::smaller_header_font.init(EB_GARAMOND_COMPRESSED_DATA, 18.f, &font_cfg))
+	if (!fonts::smaller_header_font.init(NV_GARAMOND_COMPRESSED_DATA, 20.f, &font_cfg))
 		return false;
 
 	if (!fonts::icons.init(ICONS_COMPRESSED_DATA, 14.f, &font_cfg))
