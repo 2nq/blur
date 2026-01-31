@@ -355,7 +355,6 @@ void VideoPlayer::process_mpv_events() {
 			case MPV_EVENT_PLAYBACK_RESTART:
 				u::log("MPV: Playback restarted");
 				m_is_seeking = false;
-				m_cached_percent_pos = -1.0;
 				m_seek_cv.notify_one();
 				break;
 			case MPV_EVENT_END_FILE: {
