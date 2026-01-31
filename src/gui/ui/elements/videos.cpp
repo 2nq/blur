@@ -3,7 +3,7 @@
 #include "../keys.h"
 #include "../helpers/video.h"
 #include "../../sdl.h"
-#include "gui/ui/elements/frame_snap.h"
+#include "frame_snap.h"
 
 // videos
 constexpr gfx::Size LOADER_SIZE(20, 20);
