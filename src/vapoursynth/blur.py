@@ -302,6 +302,9 @@ if start != 0:
 if end != 1:
     v_end = int(video.num_frames * end)
 
+    # @note:extra-frame add an extra frame. in the preview, visually it seems like the end point is included in the cut.
+    v_end = min(v_end + 1, video.num_frames)
+
 # safety, need to have at least one frame
 if v_end <= v_start:
     v_end = v_start + 1

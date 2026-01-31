@@ -104,6 +104,13 @@ public:
 	}
 
 	void set_playback_range(float start, float end) {
+		auto fps = get_fps();
+		if (!fps)
+			return;
+
+		// @note:extra-frame visually it seems like the end of the cut is included. so include it
+		end = end + (1.0 / *fps);
+
 		run_command_async({ "set", "ab-loop-a", std::to_string(start) });
 		run_command_async({ "set", "ab-loop-b", std::to_string(end) });
 	}
