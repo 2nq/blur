@@ -376,8 +376,6 @@ void VideoPlayer::process_mpv_events() {
 
 				const char* name = prop->name;
 
-				u::log("MPV: Prop changed: {}", name);
-
 				if (std::strcmp(name, "percent-pos") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
 					m_cached_percent_pos = *static_cast<double*>(prop->data);
 				}
