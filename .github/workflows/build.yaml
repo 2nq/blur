@@ -43,7 +43,8 @@ jobs:
             gcc-13 g++-13 \
             libfontconfig1-dev \
             autoconf automake libtool pkg-config libltdl-dev \
-            libnotify-dev
+            libnotify-dev \
+            libmpv-dev
 
       - name: Install GCC
         if: runner.os == 'Linux'
@@ -66,7 +67,7 @@ jobs:
       - name: Collect dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install ffmpeg libass zimg imagemagick autoconf automake libtool gcc ffmpeg llvm@20 meson xxhash vapoursynth fftw dylibbundler
+          brew install ffmpeg libass zimg imagemagick autoconf automake libtool gcc ffmpeg llvm@20 meson xxhash vapoursynth fftw dylibbundler mpv
           cd ci
           bash build-dependencies-macos.sh
 
