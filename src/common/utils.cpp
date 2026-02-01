@@ -289,7 +289,7 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 			"v:0", // only want to analyse first video stream
 			"-show_entries",
 			// clang-format off
-			"stream=codec_type,duration,color_range,sample_rate,r_frame_rate,pix_fmt,color_space,color_transfer,color_primaries",
+			"stream=codec_type,duration,color_range,sample_rate,r_frame_rate,pix_fmt,color_space,color_transfer,color_primaries,width,height",
 			// clang-format on
 			"-show_entries",
 			"format=duration",
@@ -348,6 +348,12 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 			else {
 				// todo: throw? what??
 			}
+		}
+		else if (line.find("width=") != std::string::npos) {
+			info.width = std::stoi(line.substr(line.find('=') + 1));
+		}
+		else if (line.find("height=") != std::string::npos) {
+			info.height = std::stoi(line.substr(line.find('=') + 1));
 		}
 	}
 

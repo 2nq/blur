@@ -87,19 +87,13 @@ namespace {
 	// 	return thumbnails[key];
 	// }
 
-	gfx::Size get_size_from_dimensions(const ui::Container& container, const std::shared_ptr<VideoPlayer>& player) {
+	gfx::Size fit_size(const ui::Container& container, const ui::UIVideo& video) {
 		gfx::Size size = LOADER_SIZE;
 
-		if (!player)
+		if (!video.video_info)
 			return size;
 
-		auto dimensions = player->get_video_dimensions();
-		if (!dimensions)
-			return size;
-
-		// we have valid dimensions, calculate proper aspect ratio
-		auto [video_width, video_height] = *dimensions;
-		float aspect_ratio = static_cast<float>(video_width) / static_cast<float>(video_height);
+		float aspect_ratio = static_cast<float>(video.video_info->width) / static_cast<float>(video.video_info->height);
 
 		gfx::Size max_size(container.get_usable_rect().w, container.get_usable_rect().h / 1.5f);
 		size = max_size;
@@ -237,29 +231,25 @@ namespace {
 		return &video;
 	}
 
-	std::optional<float> get_offset(const ui::AnimatedElement& element) {
-		auto& video_data = std::get<ui::VideoElementData>(element.element->data);
+	std::optional<float> get_video_offset(const ui::Element& element) {
+		const auto& video_data = std::get<ui::VideoElementData>(element.data);
 
-		const auto* active_video = get_active_video(element);
-		if (!active_video)
+		if (*video_data.index < 0 || *video_data.index >= video_data.videos.size())
 			return {};
 
-		auto track_rect = get_track_rect(element.element->rect.origin(), active_video->size);
+		const auto& active_video = video_data.videos[*video_data.index];
+
+		auto track_rect = get_track_rect(element.rect.origin(), active_video.size);
 
 		float offset = 0;
 		int last_width = 0;
 		for (int i = 0; i <= *video_data.index; ++i) {
-			// TODO MR: safety checks?
-			auto video = video_data.videos[i];
-			if (!video.player || !video.player->get_video_dimensions())
-				return {};
-
-			int width = video.size.w;
+			int width = video_data.videos[i].size.w;
 
 			if (i != *video_data.index)
 				offset -= width + VIDEO_GAP; // shift left by widths + spacing
 			else
-				offset += (float)track_rect.w / 2 - (float)width / 2;
+				offset += ((float)track_rect.w / 2) - ((float)width / 2);
 
 			last_width = width;
 		}
@@ -292,17 +282,6 @@ namespace {
 		auto& progress_anim = element.animations.at(ui::hasher("progress"));
 
 		progress_anim.set_goal(*progress_percent / 100.f);
-	}
-
-	void update_offset(ui::AnimatedElement& element) {
-		auto& offset_anim = element.animations.at(ui::hasher("video_offset"));
-		auto offset = get_offset(element);
-		if (offset) {
-			bool initial = offset_anim.goal == FLT_MAX;
-			if (initial)
-				offset_anim.current = *offset;
-			offset_anim.set_goal(*offset);
-		}
 	}
 
 	void init_zoom(ui::AnimatedElement& element) {
@@ -360,10 +339,6 @@ void render_videos_actual(const ui::Container& container, const ui::AnimatedElem
 
 	float anim = element.animations.at(ui::hasher("main")).current;
 	float offset = element.animations.at(ui::hasher("video_offset")).current;
-	if (offset == FLT_MAX) {
-		render::loader(element.element->rect, gfx::Color::white(155 * anim));
-		return;
-	}
 
 	int alpha = anim * 255;
 
@@ -390,24 +365,24 @@ void render_videos_actual(const ui::Container& container, const ui::AnimatedElem
 		if (!(video.player && video.player->is_video_ready() && video.player->render(inner_rect.w, inner_rect.h))) {
 			gfx::Rect loader_rect = inner_rect.shrink(LOADER_PAD, true);
 			render::loader(loader_rect, gfx::Color::white(155 * anim));
-			continue;
 		}
+		else {
+			// TODO: render::image
+			render::imgui.drawlist->AddImage(
+				video.player->get_frame_texture_for_render(),
+				inner_rect.origin(),
+				inner_rect.max(),
+				ImVec2(0, 0),
+				ImVec2(1, 1),
+				IM_COL32(255, 255, 255, player_alpha) // apply alpha for fade animations
+			);
 
-		// TODO: render::image
-		render::imgui.drawlist->AddImage(
-			video.player->get_frame_texture_for_render(),
-			inner_rect.origin(),
-			inner_rect.max(),
-			ImVec2(0, 0),
-			ImVec2(1, 1),
-			IM_COL32(255, 255, 255, player_alpha) // apply alpha for fade animations
-		);
-
-		// else {
-		// 	auto thumbnail_texture = get_thumbnail(video_data.videos[i]); // TEMPORARY [i] ACCESS TODO: PROPER
-		// 	if (thumbnail_texture)
-		// 		render::image(video_rect, *thumbnail_texture.value());
-		// }
+			// else {
+			// 	auto thumbnail_texture = get_thumbnail(video_data.videos[i]); // TEMPORARY [i] ACCESS TODO: PROPER
+			// 	if (thumbnail_texture)
+			// 		render::image(video_rect, *thumbnail_texture.value());
+			// }
+		}
 
 		render::borders(video_rect, gfx::Color(50, 50, 50, alpha), gfx::Color(15, 15, 15, alpha));
 	}
@@ -833,27 +808,36 @@ bool update_videos_actual(const ui::Container& container, ui::AnimatedElement& e
 	std::vector<gfx::Rect> rects = get_video_rects(element, rect);
 
 	for (auto [i, video] : u::enumerate(video_data.videos)) {
-		if (rects[i].contains(keys::mouse_pos)) {
+		if (!rects[i].contains(keys::mouse_pos))
+			continue;
+
+		if (i == *video_data.index) {
+			if (video.player) {
+				ui::set_cursor(SDL_SYSTEM_CURSOR_POINTER);
+
+				if (keys::is_mouse_down()) {
+					// same video, pause/unpause
+					keys::on_mouse_press_handled(SDL_BUTTON_LEFT);
+					video.player->cycle_paused();
+				}
+			}
+		}
+		else {
 			ui::set_cursor(SDL_SYSTEM_CURSOR_POINTER);
 
 			if (keys::is_mouse_down()) {
+				// different video, switch to it
 				keys::on_mouse_press_handled(SDL_BUTTON_LEFT);
 
-				if (i == *video_data.index) { // same video, pause/unpause
-					video.player->cycle_paused();
-				}
-				else { // different video, switch to it
-					if (active_video->player)
-						active_video->player->set_paused(true);
+				if (active_video->player)
+					active_video->player->set_paused(true);
 
-					*video_data.index = i;
+				*video_data.index = i;
 
-					// Reset focus state on all players
-					for (auto [j, video] : u::enumerate(video_data.videos)) {
-						if (video.player) {
-							video.player->set_focused_player(j == i);
-						}
-					}
+				// reset focus state on all players
+				for (auto [j, v] : u::enumerate(video_data.videos)) {
+					if (v.player)
+						v.player->set_focused_player(j == i);
 				}
 			}
 		}
@@ -894,17 +878,17 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 
 	for (auto [i, ui_video] : u::enumerate(ui_videos)) {
 		auto player_res = get_or_add_player(ui_video.video_id, ui_video.path, volume);
-		auto player = *player_res;
-		auto size = get_size_from_dimensions(container, player);
+		auto size = fit_size(container, ui_video);
 
 		VideoElementData::Video video{
 			.data = ui_video,
 			.size = size,
-			.player = player,
 		};
 
-		if (player) {
-			video.duration = player->get_duration();
+		if (player_res) {
+			video.player = *player_res;
+
+			video.duration = video.player->get_duration();
 
 			if (video.duration) {
 				auto waveform_res = get_waveform(ui_video.path, video.duration);
@@ -915,7 +899,7 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 				video.waveform = *waveform_res;
 			}
 
-			player->set_focused_player(i == index);
+			video.player->set_focused_player(i == index);
 		}
 
 		videos.emplace_back(std::move(video));
@@ -948,13 +932,15 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		remove_videos
 	);
 
+	auto offset = get_video_offset(element);
+
 	auto* elem = add_element(
 		container,
 		std::move(element),
 		container.element_gap,
 		{
 			{ hasher("main"), AnimationState(25.f) },
-			{ hasher("video_offset"), AnimationState(25.f, FLT_MAX, 1.f) },
+			{ hasher("video_offset"), AnimationState(25.f, offset ? *offset : 0.f, 1.f) },
 			{ hasher("progress"), AnimationState(70.f) },
 			{ hasher("seeking"), AnimationState(70.f) },
 			{ hasher("seek"), AnimationState(70.f) },
@@ -967,7 +953,12 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 
 	// some stuff has to update every time, not just on events
 	update_progress(*elem);
-	update_offset(*elem);
+
+	// update offset animation
+	if (offset) {
+		auto& offset_anim = elem->animations.at(ui::hasher("video_offset"));
+		offset_anim.set_goal(*offset);
+	};
 
 	return elem;
 }

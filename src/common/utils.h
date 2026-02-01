@@ -460,6 +460,8 @@ namespace u {
 		int fps_num = -1;
 		int fps_den = -1;
 		float duration = 0.f;
+		int width = -1;
+		int height = -1;
 
 		bool operator==(const VideoInfo& other) const = default;
 	};

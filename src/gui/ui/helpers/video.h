@@ -220,6 +220,9 @@ private:
 	}
 
 	void run_command_impl(const std::vector<std::string>& command, bool async) {
+		if (!m_mpv)
+			return;
+
 		std::vector<const char*> cmd;
 		cmd.reserve(command.size() + 1);
 
