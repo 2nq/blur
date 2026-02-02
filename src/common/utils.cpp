@@ -153,46 +153,6 @@ float u::lerp(float value, float target, float reset_speed, float snap_offset) {
 	return value;
 }
 
-constexpr int64_t PERIOD = 1;
-constexpr int64_t TOLERANCE = 1'020'000;
-constexpr int64_t MAX_TICKS = PERIOD * 9'500;
-
-void u::sleep(double seconds) {
-#ifndef WIN32
-	std::this_thread::sleep_for(std::chrono::duration<double>(seconds));
-#else // KILLLLL WINDOWS
-	using namespace std;
-	using namespace chrono;
-
-	auto t = high_resolution_clock::now();
-	auto target = t + nanoseconds(int64_t(seconds * 1e9));
-
-	static HANDLE timer;
-	if (!timer)
-		timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
-
-	int64_t maxTicks = PERIOD * 9'500;
-	for (;;) {
-		int64_t remaining = (target - t).count();
-		int64_t ticks = (remaining - TOLERANCE) / 100;
-		if (ticks <= 0)
-			break;
-		if (ticks > maxTicks)
-			ticks = maxTicks;
-
-		LARGE_INTEGER due;
-		due.QuadPart = -ticks;
-		SetWaitableTimerEx(timer, &due, 0, NULL, NULL, NULL, 0);
-		WaitForSingleObject(timer, INFINITE);
-		t = high_resolution_clock::now();
-	}
-
-	// spin
-	while (high_resolution_clock::now() < target)
-		YieldProcessor();
-#endif
-}
-
 std::filesystem::path u::get_resources_path() {
 #ifdef __APPLE__
 	// Resources path if part of a macos bundle
