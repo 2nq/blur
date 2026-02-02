@@ -149,12 +149,12 @@ namespace ui {
 			UIVideo data;
 			gfx::Size size;
 			std::shared_ptr<VideoPlayer> player;
-			std::optional<double> duration;
 			std::optional<StoredWaveform*> waveform;
+			std::optional<gui_utils::ThumbnailRes> thumbnail;
 
 			bool operator==(const Video& other) const {
 				return data == other.data && size == other.size && player == other.player &&
-				       duration == other.duration && waveform == other.waveform;
+				       waveform == other.waveform && thumbnail == other.thumbnail;
 			}
 		};
 

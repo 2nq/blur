@@ -234,7 +234,7 @@ namespace render {
 
 	void borders(const gfx::Rect& rect, const gfx::Color& border_color, const gfx::Color& inner_border_color);
 
-	void loader(const gfx::Rect& rect, const gfx::Color& color);
+	void loader(const gfx::Rect& rect, const gfx::Color& color, const std::string& loader_text = "loading...");
 
 	void waveform(
 		const gfx::Rect& rect,

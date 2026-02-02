@@ -31,9 +31,6 @@ constexpr size_t WAVEFORM_SAMPLES_PER_SEC = 80;
 namespace {
 	std::unordered_map<size_t, std::shared_ptr<VideoPlayer>> video_players;
 
-	// std::mutex thumbnail_mutex;
-	// std::unordered_map<std::string, std::shared_ptr<render::Texture>> thumbnails;
-
 	tl::expected<std::shared_ptr<VideoPlayer>, std::string> get_or_add_player(
 		const size_t video_id, const std::filesystem::path& video_path, float volume
 	) {
@@ -57,35 +54,6 @@ namespace {
 			return tl::unexpected("failed to load video");
 		}
 	}
-
-	// void create_thumbnail_async(const std::filesystem::path& video_path) {
-	// 	auto key = video_path.string();
-	// 	{
-	// 		std::lock_guard<std::mutex> lock(thumbnail_mutex);
-
-	// 		if (thumbnails.contains(key))
-	// 			return;
-	// 	}
-
-	// 	std::thread([video_path, key] {
-	// 		std::lock_guard<std::mutex> lock(thumbnail_mutex);
-
-	// 		auto thumbnail = gui_utils::get_video_thumbnail(video_path, 100, 100, 0.0);
-
-	// 		thumbnails.insert({ key, thumbnail });
-	// 	}).detach();
-	// }
-
-	// std::optional<std::shared_ptr<render::Texture>> get_thumbnail(const std::filesystem::path& video_path) {
-	// 	auto key = video_path.string();
-
-	// 	std::lock_guard<std::mutex> lock(thumbnail_mutex);
-
-	// 	if (thumbnails.contains(key))
-	// 		return {};
-
-	// 	return thumbnails[key];
-	// }
 
 	gfx::Size fit_size(const ui::Container& container, const ui::UIVideo& video) {
 		gfx::Size size = LOADER_SIZE;
@@ -303,9 +271,11 @@ namespace {
 		}
 
 		// initialise zoom
-		if (!element.animations.contains(track_zoom_end_hash) && active_video.duration) {
+		if (!element.animations.contains(track_zoom_end_hash) && active_video.data.video_info) {
 			element.animations.emplace(track_zoom_start_hash, ui::AnimationState(30.f, 0.f));
-			element.animations.emplace(track_zoom_end_hash, ui::AnimationState(30.f, *active_video.duration));
+			element.animations.emplace(
+				track_zoom_end_hash, ui::AnimationState(30.f, active_video.data.video_info->duration)
+			);
 
 			video_data.last_active_video = active_video.data.path;
 
@@ -354,19 +324,16 @@ void render_videos_actual(const ui::Container& container, const ui::AnimatedElem
 			continue;
 
 		auto video_rect = rects[i];
-
 		if (!video_rect.on_screen())
 			continue;
 
 		auto inner_rect = video_rect.shrink(1);
-
 		float player_alpha = alpha * (1.f - fade);
 
-		if (!(video.player && video.player->is_video_ready() && video.player->render(inner_rect.w, inner_rect.h))) {
-			gfx::Rect loader_rect = inner_rect.shrink(LOADER_PAD, true);
-			render::loader(loader_rect, gfx::Color::white(155 * anim));
-		}
-		else {
+		gfx::Rect loader_rect = inner_rect.shrink(LOADER_PAD, true);
+		auto loader_colour = gfx::Color::white(155 * anim);
+
+		if (video.player && video.player->is_video_ready() && video.player->render(inner_rect.w, inner_rect.h)) {
 			// TODO: render::image
 			render::imgui.drawlist->AddImage(
 				video.player->get_frame_texture_for_render(),
@@ -376,12 +343,21 @@ void render_videos_actual(const ui::Container& container, const ui::AnimatedElem
 				ImVec2(1, 1),
 				IM_COL32(255, 255, 255, player_alpha) // apply alpha for fade animations
 			);
-
-			// else {
-			// 	auto thumbnail_texture = get_thumbnail(video_data.videos[i]); // TEMPORARY [i] ACCESS TODO: PROPER
-			// 	if (thumbnail_texture)
-			// 		render::image(video_rect, *thumbnail_texture.value());
-			// }
+		}
+		else if (video.thumbnail && video.thumbnail->texture) {
+			render::image(video_rect, *video.thumbnail->texture, gfx::Color::white(player_alpha));
+		}
+		else if (video.thumbnail) {
+			render::text(
+				loader_rect.center(),
+				loader_colour,
+				video.thumbnail->error.empty() ? "failed to generate thumbnail" : video.thumbnail->error,
+				fonts::dejavu,
+				FONT_CENTERED_X | FONT_CENTERED_Y
+			);
+		}
+		else {
+			render::loader(loader_rect, loader_colour);
 		}
 
 		render::borders(video_rect, gfx::Color(50, 50, 50, alpha), gfx::Color(15, 15, 15, alpha));
@@ -392,7 +368,7 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 	const auto& video_data = std::get<ui::VideoElementData>(element.element->data);
 
 	const auto* active_video = get_active_video(element);
-	if (!active_video || !active_video->player || !active_video->duration)
+	if (!active_video->data.video_info)
 		return;
 
 	if (!element.animations.contains(ui::hasher("track_zoom_end")))
@@ -417,8 +393,8 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 	float track_zoom_end = element.animations.at(ui::hasher("track_zoom_end")).current;
 
 	// convert to normalized coordinates
-	float visible_start = track_zoom_start / (*active_video->duration);
-	float visible_range = (track_zoom_end - track_zoom_start) / (*active_video->duration);
+	float visible_start = track_zoom_start / (active_video->data.video_info->duration);
+	float visible_range = (track_zoom_end - track_zoom_start) / (active_video->data.video_info->duration);
 	float visible_end = visible_start + visible_range;
 
 	// compute grab rects in timeline coordinates
@@ -464,7 +440,7 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 	}
 
 	// Convert progress from normalized (0-1) to visible window coordinates
-	float progress_timeline = progress * (*active_video->duration);
+	float progress_timeline = progress * (active_video->data.video_info->duration);
 	float progress_local = (progress_timeline - track_zoom_start) / (track_zoom_end - track_zoom_start);
 
 	gfx::Point progress_point = rect.origin();
@@ -474,7 +450,7 @@ void render_track(const ui::Container& container, const ui::AnimatedElement& ele
 
 	if (seeking > 0.f) {
 		// Convert seek position from normalized to visible window coordinates
-		float seek_timeline = seek * (*active_video->duration);
+		float seek_timeline = seek * (active_video->data.video_info->duration);
 		float seek_local = (seek_timeline - track_zoom_start) / (track_zoom_end - track_zoom_start);
 		seek_local = std::clamp(seek_local, 0.f, 1.f);
 
@@ -498,8 +474,12 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	auto& video_data = std::get<ui::VideoElementData>(element.element->data);
 
 	const auto* active_video = get_active_video(element);
-	if (!active_video || !active_video->duration)
+	if (!active_video || !active_video->data.video_info)
 		return false;
+
+	const float& active_video_duration = active_video->data.video_info->duration;
+	const float active_video_fps =
+		active_video->data.video_info->fps_num / (float)active_video->data.video_info->fps_den;
 
 	if (!element.animations.contains(ui::hasher("track_zoom_end")))
 		return false;
@@ -519,13 +499,13 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 
 	// Ensure we have a valid range
 	if (zoom_range <= 0.f) {
-		zoom_range = (*active_video->duration);
+		zoom_range = active_video_duration;
 		zoom_end = zoom_start + zoom_range;
 	}
 
 	// Convert to normalized coordinates (0-1) for compatibility with existing grab functions
-	float visible_start = zoom_start / (*active_video->duration);
-	float visible_range = zoom_range / (*active_video->duration);
+	float visible_start = zoom_start / active_video_duration;
+	float visible_range = zoom_range / active_video_duration;
 	float visible_end = visible_start + visible_range;
 
 	auto grab_rects = get_grab_rects(element, rect, visible_start, visible_range);
@@ -549,7 +529,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			.max_ptr = video_data.end,
 			.update_fn =
 				[](const auto& v, float p) {
-					v.player->set_start(p);
+					if (v.player)
+						v.player->set_start(p);
 				},
 		},
 		GrabHandle{
@@ -559,7 +540,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			.min_ptr = video_data.start,
 			.update_fn =
 				[](const auto& v, float p) {
-					v.player->set_end(p);
+					if (v.player)
+						v.player->set_end(p);
 				},
 		},
 	};
@@ -588,9 +570,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				local_mouse_percent = std::clamp(local_mouse_percent, 0.f, 1.0f);
 
 				float timeline_percent = visible_start + (local_mouse_percent * visible_range);
-				timeline_percent = video::frame_snap::snap_percent(
-					timeline_percent, *active_video->duration, *active_video->player->get_fps()
-				);
+				timeline_percent =
+					video::frame_snap::snap_percent(timeline_percent, active_video_duration, active_video_fps);
 
 				timeline_percent = std::clamp(
 					timeline_percent, grab.min_ptr ? *grab.min_ptr : 0.f, grab.max_ptr ? *grab.max_ptr : 1.f
@@ -599,7 +580,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				*grab.var_ptr = timeline_percent;
 				grab.update_fn(*active_video, timeline_percent);
 
-				active_video->player->seek(timeline_percent, true);
+				if (active_video->player)
+					active_video->player->seek(timeline_percent, true);
 
 				auto& grab_progress_anim = element.animations.at(ui::hasher("progress"));
 				grab_progress_anim.current = timeline_percent;
@@ -607,7 +589,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			}
 			else {
 				float seek_percent = *grab.var_ptr;
-				active_video->player->seek(seek_percent, true);
+				if (active_video->player)
+					active_video->player->seek(seek_percent, true);
 				ui::reset_active_element();
 			}
 		}
@@ -638,9 +621,9 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			new_start = 0.f;
 			new_end += offset;
 		}
-		if (new_end > (*active_video->duration)) {
-			float offset = new_end - (*active_video->duration);
-			new_end = (*active_video->duration);
+		if (new_end > active_video_duration) {
+			float offset = new_end - active_video_duration;
+			new_end = active_video_duration;
 			new_start -= offset;
 		}
 
@@ -669,8 +652,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 
 			float new_range = std::clamp(
 				current_range * zoom_factor,
-				TRACK_MAX_ZOOM_SECS,           // minimum visible range (most zoomed in)
-				float(*active_video->duration) // maximum range (fully zoomed out)
+				TRACK_MAX_ZOOM_SECS,  // minimum visible range (most zoomed in)
+				active_video_duration // maximum range (fully zoomed out)
 			);
 
 			// get mouse position relative to rect (0..1)
@@ -689,8 +672,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 				new_start = 0.f;
 				new_end = new_start + new_range;
 			}
-			if (new_end > (*active_video->duration)) {
-				new_end = (*active_video->duration);
+			if (new_end > active_video_duration) {
+				new_end = active_video_duration;
 				new_start = new_end - new_range;
 			}
 
@@ -751,14 +734,14 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 			// convert to timeline coordinates using zoom window
 			float timeline_time = zoom_start + (local_mouse_percent * zoom_range);
 
-			if (auto fps = active_video->player->get_fps())
-				timeline_time = video::frame_snap::snap_time(timeline_time, *fps);
+			timeline_time = video::frame_snap::snap_time(timeline_time, active_video_fps);
 
 			// convert to normalized percent for player
-			float timeline_percent = timeline_time / (*active_video->duration);
+			float timeline_percent = timeline_time / active_video_duration;
 			timeline_percent = std::clamp(timeline_percent, 0.f, 1.f);
 
-			active_video->player->seek(timeline_percent, true);
+			if (active_video->player)
+				active_video->player->seek(timeline_percent, true);
 
 			progress_anim.set_goal(timeline_percent);
 			seek_anim.set_goal(timeline_percent);
@@ -776,20 +759,24 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	// [/g = start
 	if (keys::is_key_pressed(SDL_SCANCODE_LEFTBRACKET) || keys::is_key_pressed(SDL_SCANCODE_G)) {
 		*video_data.start = std::clamp(current_percent, 0.f, video_data.end ? *video_data.end : 1.f);
-		active_video->player->set_start(current_percent);
+		if (active_video->player)
+			active_video->player->set_start(current_percent);
 		updated = true;
 	}
 
 	// ]/h = end
 	if (keys::is_key_pressed(SDL_SCANCODE_RIGHTBRACKET) || keys::is_key_pressed(SDL_SCANCODE_H)) {
 		*video_data.end = std::clamp(current_percent, video_data.start ? *video_data.start : 0.f, 1.f);
-		active_video->player->set_end(current_percent);
+		if (active_video->player)
+			active_video->player->set_end(current_percent);
 		updated = true;
 	}
 
 	// update anims
-	if (!active_video->player->get_queued_seek())
-		seeking_anim.set_goal(0.f);
+	if (active_video->player) {
+		if (!active_video->player->get_queued_seek())
+			seeking_anim.set_goal(0.f);
+	}
 
 	return updated;
 }
@@ -858,7 +845,14 @@ bool ui::update_videos(const Container& container, AnimatedElement& element) {
 }
 
 void ui::remove_videos(AnimatedElement& element) {
+	const auto& video_data = std::get<VideoElementData>(element.element->data);
+
+	for (const auto& video : video_data.videos) {
+		gui_utils::delete_thumbnail(video.data.path);
+	}
+
 	video_players.clear();
+
 	u::log("Removed all videos");
 }
 
@@ -888,18 +882,20 @@ std::optional<ui::AnimatedElement*> ui::add_videos(
 		if (player_res) {
 			video.player = *player_res;
 
-			video.duration = video.player->get_duration();
+			video.player->set_focused_player(i == index);
+		}
 
-			if (video.duration) {
-				auto waveform_res = get_waveform(ui_video.path, video.duration);
-				if (!waveform_res)
-					// TODO MR: handle
-					return {};
+		if (ui_video.video_info) {
+			video.thumbnail = gui_utils::get_thumbnail(ui_video.path);
 
+			auto waveform_res = get_waveform(ui_video.path, ui_video.video_info->duration);
+			if (waveform_res) {
 				video.waveform = *waveform_res;
 			}
-
-			video.player->set_focused_player(i == index);
+			else {
+				// TODO MR: handle
+				return {};
+			}
 		}
 
 		videos.emplace_back(std::move(video));
