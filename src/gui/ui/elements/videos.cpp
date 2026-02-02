@@ -477,9 +477,13 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 	if (!active_video || !active_video->data.video_info)
 		return false;
 
-	const float& active_video_duration = active_video->data.video_info->duration;
-	const float active_video_fps =
-		active_video->data.video_info->fps_num / (float)active_video->data.video_info->fps_den;
+	auto active_video_duration = active_video->player && active_video->player->get_duration()
+	                                 ? *active_video->player->get_duration()
+	                                 : active_video->data.video_info->duration;
+	auto active_video_fps =
+		active_video->player && active_video->player->get_fps()
+			? *active_video->player->get_fps()
+			: active_video->data.video_info->fps_num / (float)active_video->data.video_info->fps_den;
 
 	if (!element.animations.contains(ui::hasher("track_zoom_end")))
 		return false;
@@ -652,8 +656,8 @@ bool update_track(const ui::Container& container, ui::AnimatedElement& element) 
 
 			float new_range = std::clamp(
 				current_range * zoom_factor,
-				TRACK_MAX_ZOOM_SECS,  // minimum visible range (most zoomed in)
-				active_video_duration // maximum range (fully zoomed out)
+				TRACK_MAX_ZOOM_SECS,         // minimum visible range (most zoomed in)
+				(float)active_video_duration // maximum range (fully zoomed out)
 			);
 
 			// get mouse position relative to rect (0..1)
