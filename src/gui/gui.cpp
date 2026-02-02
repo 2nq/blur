@@ -51,19 +51,19 @@ int gui::run() {
 					// 	break;
 
 				case SDL_EVENT_DROP_FILE: {
-					std::vector<std::filesystem::path> paths = { u::string_to_path(event.drop.data) };
+					std::filesystem::path path = u::string_to_path(event.drop.data);
 
 					if (gui::renderer::screen == gui::renderer::Screens::CONFIG) {
 						auto sample_video_path = blur.settings_path / "sample_video.mp4";
 						bool sample_video_exists = std::filesystem::exists(sample_video_path);
 						if (!sample_video_exists) {
-							tasks::add_sample_video(paths[0]);
+							tasks::add_sample_video(path);
 
 							break;
 						}
 					}
 
-					tasks::add_files(paths);
+					tasks::add_files({ path });
 
 					break;
 				}
