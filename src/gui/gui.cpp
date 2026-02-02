@@ -4,6 +4,8 @@
 #include "sdl.h"
 #include "ui/keys.h"
 #include "ui/ui.h"
+#include "components/notifications.h"
+#include "components/configs/configs.h"
 
 #define DEBUG_RENDER_LOGGING 0
 
@@ -52,6 +54,36 @@ int gui::run() {
 
 				case SDL_EVENT_DROP_FILE: {
 					std::filesystem::path path = u::string_to_path(event.drop.data);
+
+					if (path.extension() == ".cfg") {
+						u::log("loading config: {}", path);
+
+						try {
+							const auto file_settings = config_blur::parse(path);
+
+							ui::reset_tied_sliders();
+							gui::components::configs::settings = file_settings;
+
+							gui::components::configs::loaded_config = true;
+							gui::components::configs::should_load_config = false;
+
+							gui::renderer::screen = gui::renderer::Screens::CONFIG;
+
+							gui::components::notifications::add(
+								"Imported config", ui::NotificationType::INFO, {}, std::chrono::duration<float>(2.f)
+							);
+						}
+						catch (const std::exception& e) {
+							gui::components::notifications::add(
+								std::string("Failed to load config: ") + e.what(),
+								ui::NotificationType::NOTIF_ERROR,
+								{},
+								std::chrono::duration<float>(3.f)
+							);
+						}
+
+						break;
+					}
 
 					if (gui::renderer::screen == gui::renderer::Screens::CONFIG) {
 						auto sample_video_path = blur.settings_path / "sample_video.mp4";
