@@ -18,13 +18,8 @@ void main::open_files_button(ui::Container& container, const std::string& label)
 			if (files && *files) {
 				std::vector<std::filesystem::path> wpaths;
 
-				std::span<const char* const> span_files(files, SIZE_MAX); // big size, we stop manually
-
-				for (const auto& file : span_files) {
-					if (file == nullptr)
-						break; // null-terminated array
-
-					wpaths.emplace_back(u::string_to_path(file));
+				for (const char* const* p = files; *p != nullptr; ++p) {
+					wpaths.emplace_back(u::string_to_path(*p));
 				}
 
 				tasks::add_files(wpaths);
