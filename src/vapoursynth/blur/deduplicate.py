@@ -192,7 +192,7 @@ def fill_drops_rife(
     return u.with_format(_video, is_full_color_range, vs.RGBS, process)
 
 
-def fill_drops_multiple(
+def fill_drops_svp(
     _video: vs.VideoNode,
     is_full_color_range: bool,
     threshold: float = 0.1,
@@ -221,6 +221,83 @@ def fill_drops_multiple(
         return core.std.FrameEval(video, handler, prop_src=diffclip)
 
     return u.with_format(_video, is_full_color_range, vs.YUV420P8, process)
+
+def create_mvtools_interp(
+    good_frames,
+    duped_frames,
+    blocksize: int,
+    masking: int,
+    pel: int,
+    sharp: int,
+    overlap: int,
+    search: int,
+    searchparam: int,
+    pelsearch: int,
+    dct: int,
+):
+    super = core.mv.Super(
+        good_frames, hpad=blocksize, vpad=blocksize, pel=pel, rfilter=1, sharp=sharp
+    )
+
+    analyse_args = dict(
+        blksize=blocksize,
+        overlap=overlap,
+        search=search,
+        searchparam=searchparam,
+        pelsearch=pelsearch,
+        dct=dct,
+    )
+
+    bv = core.mv.Analyse(super, isb=True, **analyse_args)
+    fv = core.mv.Analyse(super, isb=False, **analyse_args)
+
+    interp = core.mv.FlowFPS(
+        good_frames,
+        super,
+        bv,
+        fv,
+        num=duped_frames,
+        den=1,
+        blend=False,
+        ml=max(masking, 1),
+    )
+
+    return interp[1 : 1 + duped_frames]  # first frame is a duplicate
+
+
+def fill_drops_mvtools(
+    video: vs.VideoNode,
+    threshold: float = 0.1,
+    max_frames: int | None = None,
+    blocksize: int = 4,
+    masking: int = 100,
+    pel: int = 1,
+    sharp: int = 0,
+    overlap: int = 2,
+    search: int = 5,
+    searchparam: int = 3,
+    pelsearch: int = 1,
+    dct: int = 3,
+    debug=False,
+):
+    diffclip = core.std.PlaneStats(video, video[0] + video)
+    handler = create_frame_handler(
+        video,
+        threshold,
+        max_frames,
+        create_mvtools_interp,
+        debug,
+        blocksize=blocksize,
+        masking=masking,
+        pel=pel,
+        sharp=sharp,
+        overlap=overlap,
+        search=search,
+        searchparam=searchparam,
+        pelsearch=pelsearch,
+        dct=dct,
+    )
+    return core.std.FrameEval(video, handler, prop_src=diffclip)
 
 
 def fill_drops_old(clip, threshold=0.1, debug=False):
@@ -252,7 +329,7 @@ def fill_drops_old(clip, threshold=0.1, debug=False):
     return core.std.FrameEval(clip, selectFunc, prop_src=differences)
 
 
-def fill_drops_svp(
+def fill_drops_old_svp(
     video,
     threshold: float = 0.1,
     svp_preset=blur.interpolate.DEFAULT_PRESET,
@@ -351,7 +428,7 @@ def fill_drops_svp(
     return core.std.FrameEval(video, selectFunc, prop_src=differences)
 
 
-def fill_drops_mvtools(clip, threshold=0.1, debug=False):
+def fill_drops_old_mvtools(clip, threshold=0.1, debug=False):
     if not isinstance(clip, vs.VideoNode):
         raise ValueError("This is not a clip")
 

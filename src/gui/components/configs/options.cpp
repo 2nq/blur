@@ -174,6 +174,7 @@ void configs::options(ui::Container& container) {
 			{
 				"svp",
 				"rife", // plugins broken on mac rn idk why todo: fix when its fixed
+				"mvtools",
 			},
 			settings.interpolation_method,
 			fonts::dejavu
@@ -245,6 +246,7 @@ void configs::options(ui::Container& container) {
 			{
 				"svp",
 				"rife",
+				"mvtools",
 				"old",
 			},
 			settings.deduplicate_method,

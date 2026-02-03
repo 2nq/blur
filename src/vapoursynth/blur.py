@@ -103,8 +103,29 @@ if settings["deduplicate"] and settings["deduplicate_range"] != 0:
                 debug=settings["debug"],
             )
 
-        case "svp":
-            video = blur.deduplicate.fill_drops_multiple(
+        case "rife":
+            video = blur.deduplicate.fill_drops_rife(
+                video,
+                is_full_color_range=is_full_color_range,
+                model_path=settings["rife_model"],
+                gpu_index=rife_gpu_index,
+                threshold=deduplicate_threshold,
+                max_frames=deduplicate_range,
+                debug=settings["debug"],
+            )
+
+        case "mvtools":
+            video = blur.deduplicate.fill_drops_mvtools(
+                video,
+                threshold=deduplicate_threshold,
+                max_frames=deduplicate_range,
+                blocksize=interpolation_blocksize,
+                masking=interpolation_mask_area,
+                debug=settings["debug"],
+            )
+
+        case _:
+            video = blur.deduplicate.fill_drops_svp(
                 video,
                 is_full_color_range=is_full_color_range,
                 threshold=deduplicate_threshold,
@@ -115,17 +136,6 @@ if settings["deduplicate"] and settings["deduplicate_range"] != 0:
                 svp_blocksize=interpolation_blocksize,
                 svp_masking=interpolation_mask_area,
                 svp_gpu=settings["gpu_interpolation"],
-            )
-
-        case _:
-            video = blur.deduplicate.fill_drops_rife(
-                video,
-                is_full_color_range=is_full_color_range,
-                model_path=settings["rife_model"],
-                gpu_index=rife_gpu_index,
-                threshold=deduplicate_threshold,
-                max_frames=deduplicate_range,
-                debug=settings["debug"],
             )
 
 # interpolation
@@ -201,13 +211,13 @@ if settings["interpolate"]:
                     gpu_index=rife_gpu_index,
                 )
 
-            # case "mvtools":
-            #     video = blur.interpolate.interpolate_mvtools(
-            #         video,
-            #         interpolated_fps,
-            #         blocksize=int(settings["interpolation_blocksize"]),
-            #         masking=int(settings["interpolation_mask_area"]),
-            #     )
+            case "mvtools":
+                video = blur.interpolate.interpolate_mvtools(
+                    video,
+                    interpolated_fps,
+                    blocksize=int(settings["interpolation_blocksize"]),
+                    masking=int(settings["interpolation_mask_area"]),
+                )
 
             case _:  # svp
                 if not settings["manual_svp"]:

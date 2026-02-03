@@ -75,6 +75,7 @@ void configs::option_information(ui::Container& container) {
 		{
 			"interpolation method dropdown",
 			{
+				// todo: update with mvtools
 				"Quality: rife > svp",
 				"Speed: svp > rife",
 			},
@@ -153,6 +154,7 @@ void configs::option_information(ui::Container& container) {
 		{
 			"deduplicate method dropdown",
 			{
+				// todo: update with mvtools
 				"Quality: rife > svp",
 				"Speed: old > svp > rife",
 			},
