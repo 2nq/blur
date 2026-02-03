@@ -67,7 +67,7 @@ def with_format(
         if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
             convert_kwargs["matrix_in_s"] = "709"
 
-        video = core.resize.Point(video, **convert_kwargs)
+        video = core.resize.Bilinear(video, **convert_kwargs) # note: bilinear because it does better chroma subsampling conversion
 
     video = process_func(video)
 
@@ -81,6 +81,6 @@ def with_format(
         if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
             convert_back_kwargs["matrix_s"] = "709"
 
-        video = core.resize.Point(video, **convert_back_kwargs)
+        video = core.resize.Bilinear(video, **convert_back_kwargs)
 
     return video
