@@ -6,6 +6,8 @@ struct AdvancedSettings {
 	std::string deduplicate_threshold = "0.001";
 	std::string ffmpeg_override;
 	bool debug = false;
+	bool point_resize = false;
+	std::string resize_chromaloc = "default";
 
 	float blur_weighting_gaussian_std_dev = 1.f;
 	float blur_weighting_gaussian_mean = 2.f;
@@ -100,6 +102,10 @@ namespace config_blur {
 	};
 
 	inline const std::vector<std::string> INTERPOLATION_BLOCK_SIZES = { "4", "8", "16", "32" };
+
+	inline const std::vector<std::string> RESIZE_CHROMA_LOCATIONS = {
+		"default", "left", "center", "top_left", "top", "bottom_left", "bottom",
+	};
 
 	const std::string CONFIG_FILENAME = ".blur-config.cfg";
 

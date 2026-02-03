@@ -47,6 +47,10 @@ interpolation_mask_area = u.coalesce(
     blur.interpolate.DEFAULT_MASKING,
 )
 
+resize_chromaloc = settings["resize_chromaloc"]
+if resize_chromaloc == "default":
+    resize_chromaloc = None
+
 rife_gpu_index = settings["rife_gpu_index"]
 if rife_gpu_index == -1:  # haven't benchmarked yet..?
     rife_gpu_index = 0
@@ -112,6 +116,7 @@ if settings["deduplicate"] and settings["deduplicate_range"] != 0:
                 threshold=deduplicate_threshold,
                 max_frames=deduplicate_range,
                 debug=settings["debug"],
+                point_resize=settings["point_resize"],
             )
 
         case "mvtools":
@@ -136,6 +141,8 @@ if settings["deduplicate"] and settings["deduplicate_range"] != 0:
                 svp_blocksize=interpolation_blocksize,
                 svp_masking=interpolation_mask_area,
                 svp_gpu=settings["gpu_interpolation"],
+                point_resize=settings["point_resize"],
+                resize_chromaloc=resize_chromaloc,
             )
 
 # interpolation
@@ -188,6 +195,7 @@ if settings["interpolate"]:
                 new_fps=pre_interpolated_fps,
                 model_path=settings["rife_model"],
                 gpu_index=rife_gpu_index,
+                point_resize=settings["point_resize"],
             )
 
             fps_added = video.fps - old_fps
@@ -209,6 +217,7 @@ if settings["interpolate"]:
                     new_fps=interpolated_fps,
                     model_path=settings["rife_model"],
                     gpu_index=rife_gpu_index,
+                    point_resize=settings["point_resize"],
                 )
 
             case "mvtools":
@@ -231,6 +240,8 @@ if settings["interpolate"]:
                         overlap=0,
                         masking=interpolation_mask_area,
                         gpu=settings["gpu_interpolation"],
+                        point_resize=settings["point_resize"],
+                        resize_chromaloc=resize_chromaloc,
                     )
                 else:
                     # insert interpolated fps
@@ -245,6 +256,8 @@ if settings["interpolate"]:
                         super_string=settings["super_string"],
                         vectors_string=settings["vectors_string"],
                         smooth_str=smooth_str,
+                        point_resize=settings["point_resize"],
+                        resize_chromaloc=resize_chromaloc,
                     )
 
         fps_added = video.fps - old_fps
@@ -282,7 +295,11 @@ if settings["blur"]:
                 video = blur.blending.average(video, weights)
             else:
                 video = blur.blending.average_bright(
-                    video, is_full_color_range, gamma, weights
+                    video,
+                    is_full_color_range,
+                    gamma,
+                    weights,
+                    point_resize=settings["point_resize"],
                 )
 
     # set exact fps
@@ -305,6 +322,7 @@ if settings["filters"]:
                 cont=settings["contrast"],
                 sat=settings["saturation"],
             ),
+            point_resize=settings["point_resize"],
         )
 
 start = float(vars().get("start", 0.0))

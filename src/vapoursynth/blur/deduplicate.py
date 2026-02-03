@@ -173,6 +173,7 @@ def fill_drops_rife(
     threshold: float = 0.1,
     max_frames: int | None = None,
     debug=False,
+    point_resize: bool = False,
 ):
     u.check_model_path(model_path)
 
@@ -189,7 +190,13 @@ def fill_drops_rife(
         )
         return core.std.FrameEval(video, handler, prop_src=diffclip)
 
-    return u.with_format(_video, is_full_color_range, vs.RGBS, process)
+    return u.with_format(
+        _video,
+        is_full_color_range,
+        vs.RGBS,
+        process,
+        point_resize=point_resize,
+    )
 
 
 def fill_drops_svp(
@@ -202,6 +209,8 @@ def fill_drops_svp(
     svp_blocksize=blur.interpolate.DEFAULT_BLOCKSIZE,
     svp_masking=blur.interpolate.DEFAULT_MASKING,
     svp_gpu=blur.interpolate.DEFAULT_GPU,
+    point_resize: bool = False,
+    resize_chromaloc: str | None = None,
     debug=False,
 ):
     def process(video):
@@ -220,7 +229,15 @@ def fill_drops_svp(
         )
         return core.std.FrameEval(video, handler, prop_src=diffclip)
 
-    return u.with_format(_video, is_full_color_range, vs.YUV420P8, process)
+    return u.with_format(
+        _video,
+        is_full_color_range,
+        vs.YUV420P8,
+        process,
+        point_resize=point_resize,
+        resize_chromaloc=resize_chromaloc,
+    )
+
 
 def create_mvtools_interp(
     good_frames,

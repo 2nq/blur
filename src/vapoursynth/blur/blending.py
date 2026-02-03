@@ -89,6 +89,7 @@ def average_bright(
     gamma: float,
     weights: list[float],
     divisor: float | None = None,
+    point_resize: bool = False,
 ):
     def process(video):
         def gamma_correct(video, gamma):
@@ -104,4 +105,10 @@ def average_bright(
 
         return video
 
-    return u.with_format(_video, is_full_color_range, vs.RGBS, process)
+    return u.with_format(
+        _video,
+        is_full_color_range,
+        vs.RGBS,
+        process,
+        point_resize=point_resize,
+    )

@@ -52,7 +52,12 @@ def assume_scaled_fps(clip, timescale):
 
 
 def with_format(
-    video: vs.VideoNode, is_full_color_range: bool, target_format, process_func
+    video: vs.VideoNode,
+    is_full_color_range: bool,
+    target_format,
+    process_func,
+    point_resize: bool = False,
+    resize_chromaloc: str | None = None,
 ):
     orig_format = video.format
     needs_conversion = orig_format.id != target_format
@@ -67,7 +72,14 @@ def with_format(
         if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
             convert_kwargs["matrix_in_s"] = "709"
 
-        video = core.resize.Bilinear(video, **convert_kwargs) # note: bilinear because it does better chroma subsampling conversion
+        if resize_chromaloc is not None:
+            convert_kwargs["chromaloc_s"] = resize_chromaloc
+
+        if point_resize:
+            video = core.resize.Point(video, **convert_kwargs)
+        else:
+            # bilinear instead of point (or other options) because it does better chroma subsampling conversion in general
+            video = core.resize.Bilinear(video, **convert_kwargs)
 
     video = process_func(video)
 
@@ -81,6 +93,9 @@ def with_format(
         if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
             convert_back_kwargs["matrix_s"] = "709"
 
-        video = core.resize.Bilinear(video, **convert_back_kwargs)
+        if point_resize:
+            video = core.resize.Point(video, **convert_back_kwargs)
+        else:
+            video = core.resize.Bilinear(video, **convert_back_kwargs)
 
     return video

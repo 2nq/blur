@@ -235,7 +235,20 @@ void configs::option_information(ui::Container& container) {
 				"(overrides GPU & quality options)",
 			},
 		},
-		// { "debug checkbox", { "Shows debug window and prints commands used by blur", } }
+		{
+			"resize point checkbox",
+			{
+				"Uses point resizing when switching colourspace/bit depth/chroma subsampling. Can cause issues with "
+				"high-chroma inputs (e.g. 4:4:4) - specifying chroma location can help",
+			},
+		},
+		{
+			"resize chroma location dropdown",
+			{
+				"Sets the chroma location used when subsampling. Can fix colours being moved slightly off from where "
+				"they should be",
+			},
+		},
 		{
 			"copy dates checkbox",
 			{

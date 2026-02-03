@@ -89,6 +89,8 @@ def svp(
     super_string: str,
     vectors_string: str,
     smooth_str: str,
+    point_resize: bool = False,
+    resize_chromaloc: str | None = None,
 ):
     def process(video):
         super = core.svp1.Super(video, super_string)
@@ -102,7 +104,14 @@ def svp(
             smooth_str,
         )
 
-    return u.with_format(_video, is_full_color_range, vs.YUV420P8, process)
+    return u.with_format(
+        _video,
+        is_full_color_range,
+        vs.YUV420P8,
+        process,
+        point_resize=point_resize,
+        resize_chromaloc=resize_chromaloc,
+    )
 
 
 def interpolate_svp(
@@ -116,6 +125,8 @@ def interpolate_svp(
     speed=DEFAULT_SPEED,
     masking=DEFAULT_MASKING,
     gpu=DEFAULT_GPU,
+    point_resize: bool = False,
+    resize_chromaloc: str | None = None,
 ):
     preset = preset.lower()
 
@@ -127,7 +138,15 @@ def interpolate_svp(
         new_fps, preset, algorithm, blocksize, overlap, speed, masking, gpu
     )
 
-    return svp(video, is_full_color_range, super_string, vectors_string, smooth_string)
+    return svp(
+        video,
+        is_full_color_range,
+        super_string,
+        vectors_string,
+        smooth_string,
+        point_resize=point_resize,
+        resize_chromaloc=resize_chromaloc,
+    )
 
 
 def change_fps(clip, fpsnum, fpsden=1):  # this is just directly from havsfunc
@@ -188,6 +207,7 @@ def interpolate_rife(
     new_fps: int,
     model_path: str,
     gpu_index: int,
+    point_resize: bool = False,
 ):
     u.check_model_path(model_path)
 
@@ -200,4 +220,10 @@ def interpolate_rife(
             gpu_id=gpu_index,
         )
 
-    return u.with_format(_video, is_full_color_range, vs.RGBS, process)
+    return u.with_format(
+        _video,
+        is_full_color_range,
+        vs.RGBS,
+        process,
+        point_resize=point_resize,
+    )
