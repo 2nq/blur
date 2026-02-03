@@ -56,6 +56,7 @@ struct BlurSettings {
 
 	std::string encode_preset = "h264";
 	int quality = 16;
+	bool upscale = false;
 
 	bool deduplicate = true;
 #ifdef __APPLE__

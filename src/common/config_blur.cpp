@@ -55,6 +55,7 @@ std::string config_blur::generate_config_string(const BlurSettings& settings, bo
 	output << "- rendering" << "\n";
 	output << "encode preset: " << settings.encode_preset << "\n";
 	output << "quality: " << settings.quality << "\n";
+	output << "upscale: " << (settings.upscale ? "true" : "false") << "\n";
 	if (!concise || settings.preview) {
 		output << "preview: " << (settings.preview ? "true" : "false") << "\n";
 	}
@@ -241,6 +242,7 @@ BlurSettings config_blur::parse_from_map(
 
 	config_base::extract_config_value(config_map, "encode preset", settings.encode_preset);
 	config_base::extract_config_value(config_map, "quality", settings.quality);
+	config_base::extract_config_value(config_map, "upscale", settings.upscale);
 	config_base::extract_config_value(config_map, "preview", settings.preview);
 	config_base::extract_config_value(config_map, "detailed filenames", settings.detailed_filenames);
 	config_base::extract_config_value(config_map, "copy dates", settings.copy_dates);
@@ -392,6 +394,7 @@ tl::expected<nlohmann::json, std::string> BlurSettings::to_json() const {
 
 	j["encode preset"] = this->encode_preset;
 	j["quality"] = this->quality;
+	j["upscale"] = this->upscale;
 	j["preview"] = this->preview;
 	j["detailed_filenames"] = this->detailed_filenames;
 	// j["copy_dates"] = this->copy_dates;

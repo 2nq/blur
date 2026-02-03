@@ -302,6 +302,8 @@ void configs::options(ui::Container& container) {
 		);
 	}
 
+	ui::add_checkbox("upscale checkbox", container, "upscale", settings.upscale, fonts::dejavu);
+
 	ui::add_checkbox("preview checkbox", container, "preview", settings.preview, fonts::dejavu);
 
 	ui::add_checkbox(

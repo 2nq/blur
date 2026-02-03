@@ -67,6 +67,18 @@ else:
         fpsden=fps_den if fps_den != -1 else None,
     )
 
+# upscaling (to 4K)
+# note: it's good to do this before anything else because it avoids issues with chroma subsampling conversion required for svp etc. higher res = issues with conversion (glow etc) are less noticeable
+if settings["upscale"] and video.height < 2160:
+    HEIGHT_4K = 2160
+
+    scale_factor = HEIGHT_4K / video.height
+    video = core.resize.Point(
+        video,
+        width=int(round(video.width * scale_factor)),
+        height=HEIGHT_4K,
+    )
+
 # input timescale
 if settings["timescale"]:
     input_timescale = float(settings["input_timescale"])

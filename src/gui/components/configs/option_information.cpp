@@ -158,6 +158,12 @@ void configs::option_information(ui::Container& container) {
 			},
 		},
 		{
+			"upscale checkbox",
+			{
+				"Upscales to 4K using nearest-neighbour interpolation",
+			},
+		},
+		{
 			"preview checkbox",
 			{
 				"Shows preview while rendering",
