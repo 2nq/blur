@@ -238,6 +238,13 @@ void configs::option_information(ui::Container& container) {
 			},
 		},
 		{
+			"debug checkbox",
+			{
+				"Logs ffmpeg & vspipe commands, and adds a text overlay displaying frame similarity onto duplicate "
+				"frames",
+			},
+		},
+		{
 			"resize point checkbox",
 			{
 				"Uses point resizing when switching colourspace/bit depth/chroma subsampling. Can cause issues with "
