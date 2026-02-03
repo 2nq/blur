@@ -78,6 +78,7 @@ void configs::option_information(ui::Container& container) {
 				// todo: update with mvtools
 				"Quality: rife > svp",
 				"Speed: svp > rife",
+				"NOTE: svp requires resizing to YV12. Can make colours in high-chroma inputs look worse (e.g. 4:4:4)",
 			},
 		},
 		// pre-interp settings
@@ -157,6 +158,7 @@ void configs::option_information(ui::Container& container) {
 				// todo: update with mvtools
 				"Quality: rife > svp",
 				"Speed: old > svp > rife",
+				"NOTE: svp requires resizing to YV12. Can make colours in high-chroma inputs look worse (e.g. 4:4:4)",
 			},
 		},
 		{
