@@ -178,6 +178,14 @@ void configs::option_information(ui::Container& container) {
 			},
 		},
 
+		// gpu acceleration
+		{
+			"gpu decoding",
+			{
+				"Note: GPU decoding can cause issues with colour handling",
+			},
+		},
+
 		// Timescale settings
 		// {
 		// 	"section timescale checkbox",

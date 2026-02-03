@@ -69,7 +69,7 @@ struct BlurSettings {
 	bool detailed_filenames = false;
 	bool copy_dates = false;
 
-	bool gpu_decoding = true;
+	bool gpu_decoding = false;
 	bool gpu_interpolation = true;
 	bool gpu_encoding = false;
 
