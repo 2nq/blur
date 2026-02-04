@@ -16,6 +16,7 @@ class VideoInfo:
     orig_width: int
     orig_height: int
     resize_chromaloc: str | None
+    resize_upscale_factor: float
 
 
 def load_plugins(extension: str):
@@ -83,25 +84,46 @@ def with_format(
 
     old_width = None
     old_height = None
+    use_point = True
 
     if needs_conversion:
+        ideal_scale_factor = get_scale_factor_for_format(target_format)
+        needs_upscale = ideal_scale_factor != 1
+
+        if needs_upscale:
+            ideal_width = int(video_info.orig_width * ideal_scale_factor)
+            ideal_height = int(video_info.orig_height * ideal_scale_factor)
+
+            if video_info.resize_upscale_factor != 0:
+                # upscale to avoid chroma loss
+                user_scale_factor = (
+                    ideal_scale_factor * video_info.resize_upscale_factor
+                )
+                target_width = int(video_info.orig_width * user_scale_factor)
+                target_height = int(video_info.orig_height * user_scale_factor)
+
+                # ensure image dimensions must be divisible by subsampling factor (fails otherwise)
+                format_info = core.get_video_format(target_format)
+                subsampling_w = 2**format_info.subsampling_w
+                subsampling_h = 2**format_info.subsampling_h
+                target_width = (target_width // subsampling_w) * subsampling_w
+                target_height = (target_height // subsampling_h) * subsampling_h
+
+                if video.width < target_width or video.height < target_height:
+                    old_width = video.width
+                    old_height = video.height
+
+                    video = core.resize.Point(
+                        video,
+                        width=target_width,
+                        height=target_height,
+                    )
+
         convert_kwargs = {
             "format": target_format,
             "range_in": video_info.is_full_color_range,
             "range": video_info.is_full_color_range,
         }
-
-        # upscale to avoid chroma loss
-        scale_factor = get_scale_factor_for_format(target_format)
-        if scale_factor > 1:
-            target_width = video_info.orig_width * scale_factor
-            target_height = video_info.orig_height * scale_factor
-
-            if video.width < target_width or video.height < target_height:
-                old_width = video.width
-                old_height = video.height
-                convert_kwargs["width"] = target_width
-                convert_kwargs["height"] = target_height
 
         if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
             convert_kwargs["matrix_in_s"] = "709"
@@ -109,7 +131,16 @@ def with_format(
         if video_info.resize_chromaloc is not None:
             convert_kwargs["chromaloc_s"] = video_info.resize_chromaloc
 
-        video = core.resize.Point(video, **convert_kwargs)
+        # we can use point resizing if there'll be no chroma loss
+        # otherwise use bilinear so it doesnt look super wrong
+        use_point = not needs_upscale or (
+            video.width == ideal_width and video.height == ideal_height
+        )
+
+        if use_point:
+            video = core.resize.Point(video, **convert_kwargs)
+        else:
+            video = core.resize.Bilinear(video, **convert_kwargs)
 
     video = process_func(video)
 
@@ -120,13 +151,19 @@ def with_format(
             "range": video_info.is_full_color_range,
         }
 
-        if old_width is not None and old_height is not None:
-            convert_back_kwargs["width"] = old_width
-            convert_back_kwargs["height"] = old_height
-
         if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
             convert_back_kwargs["matrix_s"] = "709"
 
-        video = core.resize.Point(video, **convert_back_kwargs)
+        if use_point:
+            video = core.resize.Point(video, **convert_back_kwargs)
+        else:
+            video = core.resize.Bilinear(video, **convert_back_kwargs)
+
+        if old_width is not None and old_height is not None:
+            video = core.resize.Point(
+                video,
+                width=old_width,
+                height=old_height,
+            )
 
     return video

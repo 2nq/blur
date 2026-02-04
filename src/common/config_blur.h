@@ -7,6 +7,7 @@ struct AdvancedSettings {
 	std::string ffmpeg_override;
 	bool debug = false;
 	std::string resize_chromaloc = "default";
+	float resize_upscale_factor = 1.f;
 
 	float blur_weighting_gaussian_std_dev = 1.f;
 	float blur_weighting_gaussian_mean = 2.f;
@@ -58,6 +59,7 @@ struct BlurSettings {
 	std::string encode_preset = "h264";
 	int quality = 16;
 	bool upscale = false;
+	bool resize_upscale = false;
 
 	bool deduplicate = true;
 #ifdef __APPLE__

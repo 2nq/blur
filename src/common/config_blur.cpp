@@ -56,6 +56,7 @@ std::string config_blur::generate_config_string(const BlurSettings& settings, bo
 	output << "encode preset: " << settings.encode_preset << "\n";
 	output << "quality: " << settings.quality << "\n";
 	output << "upscale: " << (settings.upscale ? "true" : "false") << "\n";
+	output << "chroma resize fix: " << (settings.resize_upscale ? "true" : "false") << "\n";
 	if (!concise || settings.preview) {
 		output << "preview: " << (settings.preview ? "true" : "false") << "\n";
 	}
@@ -124,6 +125,7 @@ std::string config_blur::generate_config_string(const BlurSettings& settings, bo
 				output << "debug: " << (settings.advanced.debug ? "true" : "false") << "\n";
 			}
 			output << "resizing chroma location: " << settings.advanced.resize_chromaloc << "\n";
+			output << "chroma resize fix scale: " << settings.advanced.resize_upscale_factor << "\n";
 
 			output << "\n";
 			output << "- advanced blur" << "\n";
@@ -244,6 +246,7 @@ BlurSettings config_blur::parse_from_map(
 	config_base::extract_config_value(config_map, "encode preset", settings.encode_preset);
 	config_base::extract_config_value(config_map, "quality", settings.quality);
 	config_base::extract_config_value(config_map, "upscale", settings.upscale);
+	config_base::extract_config_value(config_map, "chroma resize fix", settings.resize_upscale);
 	config_base::extract_config_value(config_map, "preview", settings.preview);
 	config_base::extract_config_value(config_map, "detailed filenames", settings.detailed_filenames);
 	config_base::extract_config_value(config_map, "copy dates", settings.copy_dates);
@@ -276,6 +279,9 @@ BlurSettings config_blur::parse_from_map(
 		config_base::extract_config_string(config_map, "custom ffmpeg filters", settings.advanced.ffmpeg_override);
 		config_base::extract_config_value(config_map, "debug", settings.advanced.debug);
 		config_base::extract_config_string(config_map, "resizing chroma location", settings.advanced.resize_chromaloc);
+		config_base::extract_config_value(
+			config_map, "chroma resize fix scale", settings.advanced.resize_upscale_factor
+		);
 
 		config_base::extract_config_value(
 			config_map, "blur weighting gaussian std dev", settings.advanced.blur_weighting_gaussian_std_dev
@@ -397,6 +403,7 @@ tl::expected<nlohmann::json, std::string> BlurSettings::to_json() const {
 	j["encode preset"] = this->encode_preset;
 	j["quality"] = this->quality;
 	j["upscale"] = this->upscale;
+	j["resize_upscale"] = this->resize_upscale;
 	j["preview"] = this->preview;
 	j["detailed_filenames"] = this->detailed_filenames;
 	// j["copy_dates"] = this->copy_dates;
@@ -418,6 +425,7 @@ tl::expected<nlohmann::json, std::string> BlurSettings::to_json() const {
 	// j["ffmpeg_override"] = this->advanced.ffmpeg_override;
 	j["debug"] = this->advanced.debug;
 	j["resize_chromaloc"] = this->advanced.resize_chromaloc;
+	j["resize_upscale_factor"] = this->advanced.resize_upscale_factor;
 
 	j["blur_weighting_gaussian_std_dev"] = this->advanced.blur_weighting_gaussian_std_dev;
 	j["blur_weighting_gaussian_mean"] = this->advanced.blur_weighting_gaussian_mean;

@@ -29,6 +29,7 @@ video_info = u.VideoInfo(
     orig_width=video.width,
     orig_height=video.height,
     resize_chromaloc=None,  # doesn't matter
+    resize_upscale_factor=0,  # doesn't matter
 )
 
 video = blur.interpolate.interpolate_rife(
