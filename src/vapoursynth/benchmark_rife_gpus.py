@@ -24,11 +24,18 @@ if vars().get("enable_lsmash") == "true":
 else:
     video = core.bs.VideoSource(source=benchmark_video_path, cachemode=0)
 
+video_info = u.VideoInfo(
+    is_full_color_range=False,  # doesn't matter
+    orig_width=video.width,
+    orig_height=video.height,
+    resize_chromaloc=None,  # doesn't matter
+)
+
 video = blur.interpolate.interpolate_rife(
     video,
-    is_full_color_range=False,  # doesn't matter
+    video_info,
     new_fps=video.fps * 3,
-    model_path=model_path,
+    model_path=str(model_path),
     gpu_index=gpu_index,
 )
 

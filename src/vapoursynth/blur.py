@@ -27,7 +27,6 @@ settings = json.loads(vars().get("settings", "{}"))
 fps_num = vars().get("fps_num", -1)
 fps_den = vars().get("fps_den", -1)
 color_range = vars().get("color_range", "")
-is_full_color_range = color_range == "pc"
 
 has_audio = vars().get("has_audio", "true") == "true"
 
@@ -71,6 +70,13 @@ else:
         fpsden=fps_den if fps_den != -1 else None,
     )
 
+video_info = u.VideoInfo(
+    is_full_color_range=color_range == "pc",
+    orig_width=video.width,
+    orig_height=video.height,
+    resize_chromaloc=resize_chromaloc,
+)
+
 # upscaling (to 4K)
 # note: it's good to do this before anything else because it avoids issues with chroma subsampling conversion required for svp etc. higher res = issues with conversion (glow etc) are less noticeable
 if settings["upscale"] and video.height < 2160:
@@ -110,13 +116,12 @@ if settings["deduplicate"] and settings["deduplicate_range"] != 0:
         case "rife":
             video = blur.deduplicate.fill_drops_rife(
                 video,
-                is_full_color_range=is_full_color_range,
+                video_info=video_info,
                 model_path=settings["rife_model"],
                 gpu_index=rife_gpu_index,
                 threshold=deduplicate_threshold,
                 max_frames=deduplicate_range,
                 debug=settings["debug"],
-                point_resize=settings["point_resize"],
             )
 
         case "mvtools":
@@ -132,7 +137,7 @@ if settings["deduplicate"] and settings["deduplicate_range"] != 0:
         case _:
             video = blur.deduplicate.fill_drops_svp(
                 video,
-                is_full_color_range=is_full_color_range,
+                video_info=video_info,
                 threshold=deduplicate_threshold,
                 max_frames=deduplicate_range,
                 debug=settings["debug"],
@@ -141,8 +146,6 @@ if settings["deduplicate"] and settings["deduplicate_range"] != 0:
                 svp_blocksize=interpolation_blocksize,
                 svp_masking=interpolation_mask_area,
                 svp_gpu=settings["gpu_interpolation"],
-                point_resize=settings["point_resize"],
-                resize_chromaloc=resize_chromaloc,
             )
 
 # interpolation
@@ -191,11 +194,10 @@ if settings["interpolate"]:
 
             video = blur.interpolate.interpolate_rife(
                 video,
-                is_full_color_range=is_full_color_range,
+                video_info=video_info,
                 new_fps=pre_interpolated_fps,
                 model_path=settings["rife_model"],
                 gpu_index=rife_gpu_index,
-                point_resize=settings["point_resize"],
             )
 
             fps_added = video.fps - old_fps
@@ -213,11 +215,10 @@ if settings["interpolate"]:
             case "rife":
                 video = blur.interpolate.interpolate_rife(
                     video,
-                    is_full_color_range=is_full_color_range,
+                    video_info=video_info,
                     new_fps=interpolated_fps,
                     model_path=settings["rife_model"],
                     gpu_index=rife_gpu_index,
-                    point_resize=settings["point_resize"],
                 )
 
             case "mvtools":
@@ -232,7 +233,7 @@ if settings["interpolate"]:
                 if not settings["manual_svp"]:
                     video = blur.interpolate.interpolate_svp(
                         video,
-                        is_full_color_range=is_full_color_range,
+                        video_info=video_info,
                         new_fps=interpolated_fps,
                         preset=settings["svp_interpolation_preset"],
                         algorithm=svp_interpolation_algorithm,
@@ -240,8 +241,6 @@ if settings["interpolate"]:
                         overlap=0,
                         masking=interpolation_mask_area,
                         gpu=settings["gpu_interpolation"],
-                        point_resize=settings["point_resize"],
-                        resize_chromaloc=resize_chromaloc,
                     )
                 else:
                     # insert interpolated fps
@@ -252,12 +251,10 @@ if settings["interpolate"]:
 
                     video = blur.interpolate.svp(
                         video,
-                        is_full_color_range=is_full_color_range,
+                        video_info=video_info,
                         super_string=settings["super_string"],
                         vectors_string=settings["vectors_string"],
                         smooth_str=smooth_str,
-                        point_resize=settings["point_resize"],
-                        resize_chromaloc=resize_chromaloc,
                     )
 
         fps_added = video.fps - old_fps
@@ -296,10 +293,9 @@ if settings["blur"]:
             else:
                 video = blur.blending.average_bright(
                     video,
-                    is_full_color_range,
+                    video_info,
                     gamma,
                     weights,
-                    point_resize=settings["point_resize"],
                 )
 
     # set exact fps
@@ -314,7 +310,7 @@ if settings["filters"]:
     ):
         video = u.with_format(
             video,
-            is_full_color_range,
+            video_info,
             vs.YUV444PS,
             lambda video: core.adjust.Tweak(
                 video,
@@ -322,7 +318,6 @@ if settings["filters"]:
                 cont=settings["contrast"],
                 sat=settings["saturation"],
             ),
-            point_resize=settings["point_resize"],
         )
 
 start = float(vars().get("start", 0.0))

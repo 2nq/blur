@@ -529,14 +529,6 @@ void configs::options(ui::Container& container) {
 
 		ui::add_checkbox("debug checkbox", container, "debug", settings.advanced.debug, fonts::dejavu);
 
-		ui::add_checkbox(
-			"resize point checkbox",
-			container,
-			"use point resizing during chroma conversions",
-			settings.advanced.point_resize,
-			fonts::dejavu
-		);
-
 		ui::add_dropdown(
 			"resize chroma location dropdown",
 			container,

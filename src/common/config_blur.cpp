@@ -123,7 +123,6 @@ std::string config_blur::generate_config_string(const BlurSettings& settings, bo
 			if (!concise || settings.advanced.debug) {
 				output << "debug: " << (settings.advanced.debug ? "true" : "false") << "\n";
 			}
-			output << "point resizing: " << (settings.advanced.point_resize ? "true" : "false") << "\n";
 			output << "resizing chroma location: " << settings.advanced.resize_chromaloc << "\n";
 
 			output << "\n";
@@ -276,7 +275,6 @@ BlurSettings config_blur::parse_from_map(
 		config_base::extract_config_value(config_map, "video container", settings.advanced.video_container);
 		config_base::extract_config_string(config_map, "custom ffmpeg filters", settings.advanced.ffmpeg_override);
 		config_base::extract_config_value(config_map, "debug", settings.advanced.debug);
-		config_base::extract_config_value(config_map, "point resizing", settings.advanced.point_resize);
 		config_base::extract_config_string(config_map, "resizing chroma location", settings.advanced.resize_chromaloc);
 
 		config_base::extract_config_value(
@@ -419,7 +417,6 @@ tl::expected<nlohmann::json, std::string> BlurSettings::to_json() const {
 	// j["video_container"] = this->advanced.video_container;
 	// j["ffmpeg_override"] = this->advanced.ffmpeg_override;
 	j["debug"] = this->advanced.debug;
-	j["point_resize"] = this->advanced.point_resize;
 	j["resize_chromaloc"] = this->advanced.resize_chromaloc;
 
 	j["blur_weighting_gaussian_std_dev"] = this->advanced.blur_weighting_gaussian_std_dev;

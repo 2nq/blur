@@ -245,13 +245,6 @@ void configs::option_information(ui::Container& container) {
 			},
 		},
 		{
-			"resize point checkbox",
-			{
-				"Uses point resizing when switching colourspace/bit depth/chroma subsampling. Can cause issues with "
-				"high-chroma inputs (e.g. 4:4:4) - specifying chroma location can help",
-			},
-		},
-		{
 			"resize chroma location dropdown",
 			{
 				"Sets the chroma location used when subsampling. Can fix colours being moved slightly off from where "

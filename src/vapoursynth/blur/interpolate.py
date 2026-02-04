@@ -38,7 +38,7 @@ def generate_svp_strings(
     }
 
     # build vectors json
-    vectors_json = {
+    vectors_json: dict = {
         "block": {
             "w": blocksize,
             "overlap": overlap,
@@ -85,12 +85,10 @@ def generate_svp_strings(
 
 def svp(
     _video: vs.VideoNode,
-    is_full_color_range: bool,
+    video_info: u.VideoInfo,
     super_string: str,
     vectors_string: str,
     smooth_str: str,
-    point_resize: bool = False,
-    resize_chromaloc: str | None = None,
 ):
     def process(video):
         super = core.svp1.Super(video, super_string)
@@ -106,17 +104,15 @@ def svp(
 
     return u.with_format(
         _video,
-        is_full_color_range,
+        video_info,
         vs.YUV420P8,
         process,
-        point_resize=point_resize,
-        resize_chromaloc=resize_chromaloc,
     )
 
 
 def interpolate_svp(
     video: vs.VideoNode,
-    is_full_color_range: bool,
+    video_info: u.VideoInfo,
     new_fps: int,
     preset=DEFAULT_PRESET,
     algorithm=DEFAULT_ALGORITHM,
@@ -125,8 +121,6 @@ def interpolate_svp(
     speed=DEFAULT_SPEED,
     masking=DEFAULT_MASKING,
     gpu=DEFAULT_GPU,
-    point_resize: bool = False,
-    resize_chromaloc: str | None = None,
 ):
     preset = preset.lower()
 
@@ -140,12 +134,10 @@ def interpolate_svp(
 
     return svp(
         video,
-        is_full_color_range,
+        video_info,
         super_string,
         vectors_string,
         smooth_string,
-        point_resize=point_resize,
-        resize_chromaloc=resize_chromaloc,
     )
 
 
@@ -203,11 +195,10 @@ def interpolate_mvtools(
 
 def interpolate_rife(
     _video: vs.VideoNode,
-    is_full_color_range: bool,
+    video_info: u.VideoInfo,
     new_fps: int,
     model_path: str,
     gpu_index: int,
-    point_resize: bool = False,
 ):
     u.check_model_path(model_path)
 
@@ -222,8 +213,7 @@ def interpolate_rife(
 
     return u.with_format(
         _video,
-        is_full_color_range,
+        video_info,
         vs.RGBS,
         process,
-        point_resize=point_resize,
     )

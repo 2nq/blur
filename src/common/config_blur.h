@@ -6,7 +6,6 @@ struct AdvancedSettings {
 	std::string deduplicate_threshold = "0.001";
 	std::string ffmpeg_override;
 	bool debug = false;
-	bool point_resize = false;
 	std::string resize_chromaloc = "default";
 
 	float blur_weighting_gaussian_std_dev = 1.f;
