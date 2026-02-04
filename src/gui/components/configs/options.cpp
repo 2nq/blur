@@ -304,10 +304,6 @@ void configs::options(ui::Container& container) {
 		);
 	}
 
-	ui::add_checkbox("upscale checkbox", container, "upscale", settings.upscale, fonts::dejavu);
-
-	ui::add_checkbox("resize upscale checkbox", container, "chroma resize fix", settings.resize_upscale, fonts::dejavu);
-
 	ui::add_checkbox("preview checkbox", container, "preview", settings.preview, fonts::dejavu);
 
 	ui::add_checkbox(
@@ -317,6 +313,10 @@ void configs::options(ui::Container& container) {
 	ui::add_checkbox("copy dates checkbox", container, "copy dates", settings.copy_dates, fonts::dejavu);
 
 	ui::add_text_input("output path input", container, app_settings.output_prefix, "output path", fonts::dejavu);
+
+	ui::add_checkbox("upscale checkbox", container, "upscale", settings.upscale, fonts::dejavu);
+
+	ui::add_checkbox("resize upscale checkbox", container, "chroma resize fix", settings.resize_upscale, fonts::dejavu);
 
 	/*
 	    GPU Acceleration

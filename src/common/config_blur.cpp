@@ -55,8 +55,6 @@ std::string config_blur::generate_config_string(const BlurSettings& settings, bo
 	output << "- rendering" << "\n";
 	output << "encode preset: " << settings.encode_preset << "\n";
 	output << "quality: " << settings.quality << "\n";
-	output << "upscale: " << (settings.upscale ? "true" : "false") << "\n";
-	output << "chroma resize fix: " << (settings.resize_upscale ? "true" : "false") << "\n";
 	if (!concise || settings.preview) {
 		output << "preview: " << (settings.preview ? "true" : "false") << "\n";
 	}
@@ -66,6 +64,8 @@ std::string config_blur::generate_config_string(const BlurSettings& settings, bo
 	if (!concise || settings.copy_dates) {
 		output << "copy dates: " << (settings.copy_dates ? "true" : "false") << "\n";
 	}
+	output << "upscale: " << (settings.upscale ? "true" : "false") << "\n";
+	output << "chroma resize fix: " << (settings.resize_upscale ? "true" : "false") << "\n";
 
 	// GPU acceleration section
 	if (!concise || settings.gpu_decoding || settings.gpu_interpolation || settings.gpu_encoding) {
@@ -245,11 +245,11 @@ BlurSettings config_blur::parse_from_map(
 
 	config_base::extract_config_value(config_map, "encode preset", settings.encode_preset);
 	config_base::extract_config_value(config_map, "quality", settings.quality);
-	config_base::extract_config_value(config_map, "upscale", settings.upscale);
-	config_base::extract_config_value(config_map, "chroma resize fix", settings.resize_upscale);
 	config_base::extract_config_value(config_map, "preview", settings.preview);
 	config_base::extract_config_value(config_map, "detailed filenames", settings.detailed_filenames);
 	config_base::extract_config_value(config_map, "copy dates", settings.copy_dates);
+	config_base::extract_config_value(config_map, "upscale", settings.upscale);
+	config_base::extract_config_value(config_map, "chroma resize fix", settings.resize_upscale);
 
 	config_base::extract_config_value(config_map, "gpu decoding", settings.gpu_decoding);
 	config_base::extract_config_value(config_map, "gpu interpolation", settings.gpu_interpolation);
