@@ -132,7 +132,7 @@ def with_format(
             convert_kwargs["chromaloc_s"] = video_info.resize_chromaloc
 
         # we can use point resizing if there'll be no chroma loss
-        # otherwise use bilinear so it doesnt look super wrong
+        # otherwise use bicubic so it doesnt look super wrong
         use_point = not needs_upscale or (
             video.width == ideal_width and video.height == ideal_height
         )
@@ -140,7 +140,7 @@ def with_format(
         if use_point:
             video = core.resize.Point(video, **convert_kwargs)
         else:
-            video = core.resize.Bilinear(video, **convert_kwargs)
+            video = core.resize.Bicubic(video, **convert_kwargs)
 
     video = process_func(video)
 
@@ -157,7 +157,7 @@ def with_format(
         if use_point:
             video = core.resize.Point(video, **convert_back_kwargs)
         else:
-            video = core.resize.Bilinear(video, **convert_back_kwargs)
+            video = core.resize.Bicubic(video, **convert_back_kwargs)
 
         if old_width is not None and old_height is not None:
             video = core.resize.Point(

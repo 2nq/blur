@@ -264,7 +264,7 @@ void configs::option_information(ui::Container& container) {
 			"chroma resize fix scale slider",
 			{
 				"Adjusts how much upscaling is done during the chroma fix upscale. Anything less than 1 will prevent "
-				"the fix from working fully, as it'll still mean bilinear resizing, but will still provide a "
+				"the fix from working fully, as it'll still mean bicubic resizing, but will still provide a "
 				"benefit to the output colour quality.",
 				"Lower = faster rendering & less RAM usage, but worse colours",
 			},
