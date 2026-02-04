@@ -370,7 +370,7 @@ tl::expected<rendering::detail::PipelineResult, std::string> rendering::detail::
 		bool vspipe_audio_ready = false;
 #endif
 
-		std::thread progress_thread([&]() {
+		std::thread vspipe_stderr_thread([&]() {
 			std::string line;
 			char ch = 0;
 			while (vspipe_stderr.get(ch)) {
@@ -487,7 +487,7 @@ tl::expected<rendering::detail::PipelineResult, std::string> rendering::detail::
 #endif
 
 		bool killed = false;
-		while (vspipe_process.running() || (audio && vspipe_audio_process.running()) || ffmpeg_process.running()) {
+		while (ffmpeg_process.running()) {
 			if (state->m_to_stop) {
 				vspipe_process.terminate();
 				if (audio && vspipe_audio_process) {
@@ -506,15 +506,21 @@ tl::expected<rendering::detail::PipelineResult, std::string> rendering::detail::
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 		}
 
-		// Clean up threads
-		if (progress_thread.joinable())
-			progress_thread.join();
+		// stop stuff if they're stuck
+		vspipe_process.terminate();
+		if (audio && vspipe_audio_process) {
+			vspipe_audio_process.terminate();
+		}
+
+		// wait for threads to finish
+		if (ffmpeg_stderr_thread.joinable())
+			ffmpeg_stderr_thread.join();
+
+		if (vspipe_stderr_thread.joinable())
+			vspipe_stderr_thread.join();
 
 		if (audio && vspipe_audio_stderr_thread && vspipe_audio_stderr_thread->joinable())
 			vspipe_audio_stderr_thread->join();
-
-		if (ffmpeg_stderr_thread.joinable())
-			ffmpeg_stderr_thread.join();
 
 		// Clean up named pipes
 #ifndef _WIN32
