@@ -93,7 +93,7 @@ def with_format(
 
         # upscale to avoid chroma loss
         scale_factor = get_scale_factor_for_format(target_format)
-        if scale_factor != 1:
+        if scale_factor > 1:
             target_width = video_info.orig_width * scale_factor
             target_height = video_info.orig_height * scale_factor
 
