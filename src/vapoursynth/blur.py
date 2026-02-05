@@ -50,10 +50,6 @@ resize_chromaloc = settings["resize_chromaloc"]
 if resize_chromaloc == "default":
     resize_chromaloc = None
 
-resize_upscale_factor = (
-    settings["resize_upscale_factor"] if settings["resize_upscale"] else 0
-)
-
 rife_gpu_index = settings["rife_gpu_index"]
 if rife_gpu_index == -1:  # haven't benchmarked yet..?
     rife_gpu_index = 0
@@ -79,7 +75,6 @@ video_info = u.VideoInfo(
     orig_width=video.width,
     orig_height=video.height,
     resize_chromaloc=resize_chromaloc,
-    resize_upscale_factor=resize_upscale_factor,
 )
 
 # upscaling (to 4K)

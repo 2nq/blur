@@ -90,6 +90,8 @@ def svp(
     vectors_string: str,
     smooth_str: str,
 ):
+    _video = core.fmtc.bitdepth(_video, bits=8)
+
     def process(video):
         super = core.svp1.Super(video, super_string)
         vectors = core.svp1.Analyse(super["clip"], super["data"], video, vectors_string)
@@ -102,9 +104,8 @@ def svp(
             smooth_str,
         )
 
-    return u.with_format(
+    return u.with_scaled_luminance(
         _video,
-        video_info,
         vs.YUV420P8,
         process,
     )

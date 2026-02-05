@@ -209,6 +209,8 @@ def fill_drops_svp(
     svp_gpu=blur.interpolate.DEFAULT_GPU,
     debug=False,
 ):
+    _video = core.fmtc.bitdepth(_video, bits=8)
+
     def process(video):
         diffclip = core.std.PlaneStats(video, video[0] + video)
         handler = create_frame_handler(
@@ -225,9 +227,8 @@ def fill_drops_svp(
         )
         return core.std.FrameEval(video, handler, prop_src=diffclip)
 
-    return u.with_format(
+    return u.with_scaled_luminance(
         _video,
-        video_info,
         vs.YUV420P8,
         process,
     )

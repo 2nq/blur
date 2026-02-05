@@ -168,15 +168,6 @@ void configs::option_information(ui::Container& container) {
 			},
 		},
 		{
-			"resize upscale checkbox",
-			{
-				"Fixes chroma loss that can arise when rendering high-chroma inputs (e.g. 4:4:4).",
-				"Temporarily upscales the video (e.g. 4:4:4 input during SVP interpolation = 4x upscale).",
-				"Results in a slower render and more RAM usage, but a much better looking output.",
-				"How much upscaling is done can be adjusted via advanced->chroma resize fix scale",
-			},
-		},
-		{
 			"preview checkbox",
 			{
 				"Shows preview while rendering",
@@ -258,15 +249,6 @@ void configs::option_information(ui::Container& container) {
 			{
 				"Sets the chroma location used when resizing. Can fix colours being moved slightly off from where "
 				"they should be",
-			},
-		},
-		{
-			"chroma resize fix scale slider",
-			{
-				"Adjusts how much upscaling is done during the chroma fix upscale. Anything less than 1 will prevent "
-				"the fix from working fully, as it'll still mean bicubic resizing, but will still provide a "
-				"benefit to the output colour quality.",
-				"Lower = faster rendering & less RAM usage, but worse colours",
 			},
 		},
 		{

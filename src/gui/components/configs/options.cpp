@@ -316,8 +316,6 @@ void configs::options(ui::Container& container) {
 
 	ui::add_checkbox("upscale checkbox", container, "upscale", settings.upscale, fonts::dejavu);
 
-	ui::add_checkbox("resize upscale checkbox", container, "chroma resize fix", settings.resize_upscale, fonts::dejavu);
-
 	/*
 	    GPU Acceleration
 	*/
@@ -537,16 +535,6 @@ void configs::options(ui::Container& container) {
 			"resize chroma location",
 			config_blur::RESIZE_CHROMA_LOCATIONS,
 			settings.advanced.resize_chromaloc,
-			fonts::dejavu
-		);
-
-		ui::add_slider(
-			"chroma resize fix scale slider",
-			container,
-			0.f,
-			1.f,
-			&settings.advanced.resize_upscale_factor,
-			"chroma resize fix scale: {:.2f}",
 			fonts::dejavu
 		);
 

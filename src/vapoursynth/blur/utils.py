@@ -16,7 +16,6 @@ class VideoInfo:
     orig_width: int
     orig_height: int
     resize_chromaloc: str | None
-    resize_upscale_factor: float
 
 
 def load_plugins(extension: str):
@@ -61,16 +60,59 @@ def assume_scaled_fps(clip, timescale):
     )
 
 
-def get_scale_factor_for_format(format_id) -> int:
-    format_info = core.get_video_format(format_id)
+def scale_luminance(video: vs.VideoNode, upscale: bool, y_scale_w: int, y_scale_h: int):
+    if y_scale_w == 1 and y_scale_h == 1:
+        return video
 
-    if format_info.color_family == vs.RGB:
-        return 1
+    y = core.std.ShufflePlanes(video, planes=0, colorfamily=vs.GRAY)
+    u = core.std.ShufflePlanes(video, planes=1, colorfamily=vs.GRAY)
+    v = core.std.ShufflePlanes(video, planes=2, colorfamily=vs.GRAY)
 
-    if format_info.color_family == vs.YUV:
-        return (2**format_info.subsampling_w) * (2**format_info.subsampling_h)
+    if upscale:
+        y = core.resize.Point(y, width=y.width * y_scale_w, height=y.height * y_scale_h)
+    else:  # downscale
+        y = core.resize.Point(y, width=y.width / y_scale_w, height=y.height / y_scale_h)
 
-    return 1
+    video = core.std.ShufflePlanes(
+        clips=[y, u, v], planes=[0, 0, 0], colorfamily=vs.YUV
+    )
+
+    return video
+
+
+def with_scaled_luminance(
+    video: vs.VideoNode,
+    target_format,
+    process_func,
+):
+    in_format_info = core.get_video_format(video.format)
+    target_format_info = core.get_video_format(target_format)
+
+    scale_w = 1
+    scale_h = 1
+
+    if video.format.color_family == vs.ColorFamily.YUV:
+        subsampling_diff_w = (
+            target_format_info.subsampling_w - in_format_info.subsampling_w
+        )
+        subsampling_diff_h = (
+            target_format_info.subsampling_h - in_format_info.subsampling_h
+        )
+
+        scale_w = (
+            # 2 ** cause every 2 pixels theres x subsampled pixels
+            2**subsampling_diff_w
+        )
+        scale_h = 2**subsampling_diff_h
+
+        video = scale_luminance(video, True, scale_w, scale_h)
+
+    video = process_func(video)
+
+    if scale_w != 1 or scale_h != 1:
+        video = scale_luminance(video, False, scale_w, scale_h)
+
+    return video
 
 
 def with_format(
@@ -82,43 +124,7 @@ def with_format(
     orig_format = video.format
     needs_conversion = orig_format.id != target_format
 
-    old_width = None
-    old_height = None
-    use_point = True
-
     if needs_conversion:
-        ideal_scale_factor = get_scale_factor_for_format(target_format)
-        needs_upscale = ideal_scale_factor != 1
-
-        if needs_upscale:
-            ideal_width = int(video_info.orig_width * ideal_scale_factor)
-            ideal_height = int(video_info.orig_height * ideal_scale_factor)
-
-            if video_info.resize_upscale_factor != 0:
-                # upscale to avoid chroma loss
-                user_scale_factor = (
-                    ideal_scale_factor * video_info.resize_upscale_factor
-                )
-                target_width = int(video_info.orig_width * user_scale_factor)
-                target_height = int(video_info.orig_height * user_scale_factor)
-
-                # ensure image dimensions must be divisible by subsampling factor (fails otherwise)
-                format_info = core.get_video_format(target_format)
-                subsampling_w = 2**format_info.subsampling_w
-                subsampling_h = 2**format_info.subsampling_h
-                target_width = (target_width // subsampling_w) * subsampling_w
-                target_height = (target_height // subsampling_h) * subsampling_h
-
-                if video.width < target_width or video.height < target_height:
-                    old_width = video.width
-                    old_height = video.height
-
-                    video = core.resize.Point(
-                        video,
-                        width=target_width,
-                        height=target_height,
-                    )
-
         convert_kwargs = {
             "format": target_format,
             "range_in": video_info.is_full_color_range,
@@ -131,16 +137,7 @@ def with_format(
         if video_info.resize_chromaloc is not None:
             convert_kwargs["chromaloc_s"] = video_info.resize_chromaloc
 
-        # we can use point resizing if there'll be no chroma loss
-        # otherwise use bicubic so it doesnt look super wrong
-        use_point = not needs_upscale or (
-            video.width == ideal_width and video.height == ideal_height
-        )
-
-        if use_point:
-            video = core.resize.Point(video, **convert_kwargs)
-        else:
-            video = core.resize.Bicubic(video, **convert_kwargs)
+        video = core.resize.Point(video, **convert_kwargs)
 
     video = process_func(video)
 
@@ -154,16 +151,6 @@ def with_format(
         if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
             convert_back_kwargs["matrix_s"] = "709"
 
-        if use_point:
-            video = core.resize.Point(video, **convert_back_kwargs)
-        else:
-            video = core.resize.Bicubic(video, **convert_back_kwargs)
-
-        if old_width is not None and old_height is not None:
-            video = core.resize.Point(
-                video,
-                width=old_width,
-                height=old_height,
-            )
+        video = core.resize.Point(video, **convert_back_kwargs)
 
     return video
