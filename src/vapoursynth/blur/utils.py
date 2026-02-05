@@ -100,7 +100,8 @@ def with_scaled_luminance(
         )
 
         scale_w = (
-            # 2 ** cause every 2 pixels theres x subsampled pixels
+            # for each increase in subsampling level, chroma resolution halves
+            # subsampling=0 -> full res, subsampling=1 -> half res, subsampling=2 -> quarter res
             2**subsampling_diff_w
         )
         scale_h = 2**subsampling_diff_h
