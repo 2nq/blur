@@ -77,18 +77,6 @@ video_info = u.VideoInfo(
     resize_chromaloc=resize_chromaloc,
 )
 
-# upscaling (to 4K)
-# note: it's good to do this before anything else because it avoids issues with chroma subsampling conversion required for svp etc. higher res = issues with conversion (glow etc) are less noticeable
-if settings["upscale"] and video.height < 2160:
-    HEIGHT_4K = 2160
-
-    scale_factor = HEIGHT_4K / video.height
-    video = core.resize.Point(
-        video,
-        width=int(round(video.width * scale_factor)),
-        height=HEIGHT_4K,
-    )
-
 # input timescale
 if settings["timescale"]:
     input_timescale = float(settings["input_timescale"])
@@ -319,6 +307,17 @@ if settings["filters"]:
                 sat=settings["saturation"],
             ),
         )
+
+# upscaling (to 4K)
+if settings["upscale"] and video.height < 2160:
+    HEIGHT_4K = 2160
+
+    scale_factor = HEIGHT_4K / video.height
+    video = core.resize.Point(
+        video,
+        width=int(round(video.width * scale_factor)),
+        height=HEIGHT_4K,
+    )
 
 start = float(vars().get("start", 0.0))
 end = float(vars().get("end", 1.0))
