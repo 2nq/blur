@@ -185,9 +185,17 @@ def with_format(
                 convert_kwargs["chromaloc_s"] = video_info.resize_chromaloc
 
             video = core.resize.Point(video, **convert_kwargs)
+    except BlurException:
+        raise
+    except Exception as e:
+        raise BlurException(
+            "Failed to convert video format. You may need to convert your input video's colourspace manually.",
+            e,
+        )
 
-        video = process_func(video)
+    video = process_func(video)
 
+    try:
         if needs_conversion:
             convert_back_kwargs = {
                 "format": orig_format.id,
@@ -201,8 +209,10 @@ def with_format(
             video = core.resize.Point(video, **convert_back_kwargs)
 
         return video
+    except BlurException:
+        raise
     except Exception as e:
         raise BlurException(
-            "Failed to convert video format. You may need to convert your input video's colourspace manually.",
+            "Failed to convert video format back after processing. Please copy the extended log and report this to GitHub issues or the Discord.",
             e,
         )
