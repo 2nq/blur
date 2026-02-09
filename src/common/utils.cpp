@@ -4,8 +4,6 @@
 
 namespace {
 	bool init_hw = false;
-
-	std::unordered_map<std::string, bool> codec_available_map;
 }
 
 // NOLINTBEGIN gpt ass code
@@ -610,14 +608,14 @@ bool u::test_codec(const std::string& codec) {
 }
 
 std::set<std::string> u::get_available_codecs(const std::set<std::string>& codecs) {
-	std::vector<std::future<std::pair<std::string, bool>>> futures;
-	futures.reserve(codecs.size());
+	static std::unordered_map<std::string, bool> codec_available_cache;
 
 	std::set<std::string> result;
+	std::vector<std::future<std::pair<std::string, bool>>> futures;
 
 	for (const auto& codec : codecs) {
-		if (codec_available_map.contains(codec)) {
-			if (codec_available_map[codec])
+		if (codec_available_cache.contains(codec)) {
+			if (codec_available_cache[codec])
 				result.insert(codec);
 
 			continue;
@@ -632,7 +630,7 @@ std::set<std::string> u::get_available_codecs(const std::set<std::string>& codec
 	for (auto& future : futures) {
 		auto [codec, available] = future.get();
 
-		codec_available_map[codec] = available;
+		codec_available_cache[codec] = available;
 
 		if (available)
 			result.insert(codec);
