@@ -83,16 +83,13 @@ def generate_svp_strings(
     return [json.dumps(obj) for obj in [super_json, vectors_json, smooth_json]]
 
 
-def svp(
-    _video: vs.VideoNode,
-    video_info: u.VideoInfo,
+def SVP(
+    video: vs.VideoNode,
     super_string: str,
     vectors_string: str,
     smooth_str: str,
 ):
-    _video = core.fmtc.bitdepth(_video, bits=8)
-
-    def process(video):
+    try:
         super = core.svp1.Super(video, super_string)
         vectors = core.svp1.Analyse(super["clip"], super["data"], video, vectors_string)
         return core.svp2.SmoothFps(
@@ -103,6 +100,24 @@ def svp(
             vectors["data"],
             smooth_str,
         )
+    except vs.Error as e:
+        raise u.BlurException(
+            user_error="Failed to initialise SVP. Ensure your GPU drivers are up to date. You may need to disable 'gpu interpolation'.",
+            original_exception=e,
+        )
+
+
+def svp(
+    _video: vs.VideoNode,
+    video_info: u.VideoInfo,
+    super_string: str,
+    vectors_string: str,
+    smooth_str: str,
+):
+    _video = core.fmtc.bitdepth(_video, bits=8)
+
+    def process(video):
+        return SVP(video, super_string, vectors_string, smooth_str)
 
     return u.with_scaled_luminance(
         _video,

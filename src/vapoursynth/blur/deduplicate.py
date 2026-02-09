@@ -66,20 +66,8 @@ def create_svp_interp(
         )
     )
 
-    super = core.svp1.Super(good_frames, super_string)
-    vectors = core.svp1.Analyse(
-        super["clip"], super["data"], good_frames, vectors_string
-    )
-
-    interp = core.svp2.SmoothFps(
-        good_frames,
-        super["clip"],
-        super["data"],
-        vectors["clip"],
-        vectors["data"],
-        smooth_string,
-        src=good_frames,
-        fps=good_frames.fps,
+    interp = blur.interpolate.SVP(
+        good_frames, super_string, vectors_string, smooth_string
     )
 
     return interp[1 : 1 + duped_frames]  # first frame is a duplicate
@@ -340,148 +328,148 @@ def fill_drops_old(clip, threshold=0.1, debug=False):
     return core.std.FrameEval(clip, selectFunc, prop_src=differences)
 
 
-def fill_drops_old_svp(
-    video,
-    threshold: float = 0.1,
-    svp_preset=blur.interpolate.DEFAULT_PRESET,
-    svp_algorithm=blur.interpolate.DEFAULT_ALGORITHM,
-    svp_blocksize=blur.interpolate.DEFAULT_BLOCKSIZE,
-    svp_masking=blur.interpolate.DEFAULT_MASKING,
-    svp_gpu=blur.interpolate.DEFAULT_GPU,
-    debug=False,
-):
-    if not isinstance(video, vs.VideoNode):
-        raise ValueError("This is not a video")
+# def fill_drops_old_svp(
+#     video,
+#     threshold: float = 0.1,
+#     svp_preset=blur.interpolate.DEFAULT_PRESET,
+#     svp_algorithm=blur.interpolate.DEFAULT_ALGORITHM,
+#     svp_blocksize=blur.interpolate.DEFAULT_BLOCKSIZE,
+#     svp_masking=blur.interpolate.DEFAULT_MASKING,
+#     svp_gpu=blur.interpolate.DEFAULT_GPU,
+#     debug=False,
+# ):
+#     if not isinstance(video, vs.VideoNode):
+#         raise ValueError("This is not a video")
 
-    [super_string, vectors_string, smooth_string] = (
-        blur.interpolate.generate_svp_strings(
-            new_fps=video.fps,
-            preset=svp_preset,
-            algorithm=svp_algorithm,
-            blocksize=svp_blocksize,
-            masking=svp_masking,
-            gpu=svp_gpu,
-        )
-    )
+#     [super_string, vectors_string, smooth_string] = (
+#         blur.interpolate.generate_svp_strings(
+#             new_fps=video.fps,
+#             preset=svp_preset,
+#             algorithm=svp_algorithm,
+#             blocksize=svp_blocksize,
+#             masking=svp_masking,
+#             gpu=svp_gpu,
+#         )
+#     )
 
-    super = core.svp1.Super(video, super_string)
-    vectors = core.svp1.Analyse(super["clip"], super["data"], video, vectors_string)
-    filldrops = core.svp2.SmoothFps(
-        video,
-        super["clip"],
-        super["data"],
-        vectors["clip"],
-        vectors["data"],
-        smooth_string,
-        src=video,
-        fps=video.fps,
-    )
+#     super = core.svp1.Super(video, super_string)
+#     vectors = core.svp1.Analyse(super["clip"], super["data"], video, vectors_string)
+#     filldrops = core.svp2.SmoothFps(
+#         video,
+#         super["clip"],
+#         super["data"],
+#         vectors["clip"],
+#         vectors["data"],
+#         smooth_string,
+#         src=video,
+#         fps=video.fps,
+#     )
 
-    def selectFunc(n, f):
-        if f.props["PlaneStatsDiff"] >= threshold or n == 0:
-            return video
+#     def selectFunc(n, f):
+#         if f.props["PlaneStatsDiff"] >= threshold or n == 0:
+#             return video
 
-        clip_1fps = core.std.AssumeFPS(video, fpsnum=1, fpsden=1)
+#         clip_1fps = core.std.AssumeFPS(video, fpsnum=1, fpsden=1)
 
-        good_frames = clip_1fps[n - 1] + clip_1fps[n + 1]
+#         good_frames = clip_1fps[n - 1] + clip_1fps[n + 1]
 
-        [super_string, vectors_string, smooth_string] = (
-            blur.interpolate.generate_svp_strings(
-                new_fps=3,
-                preset=svp_preset,
-                algorithm=svp_algorithm,
-                blocksize=svp_blocksize,
-                # overlap=2,
-                # speed="medium",
-                masking=svp_masking,
-                gpu=svp_gpu,
-            )
-        )
+#         [super_string, vectors_string, smooth_string] = (
+#             blur.interpolate.generate_svp_strings(
+#                 new_fps=3,
+#                 preset=svp_preset,
+#                 algorithm=svp_algorithm,
+#                 blocksize=svp_blocksize,
+#                 # overlap=2,
+#                 # speed="medium",
+#                 masking=svp_masking,
+#                 gpu=svp_gpu,
+#             )
+#         )
 
-        super = core.svp1.Super(good_frames, super_string)
-        vectors = core.svp1.Analyse(
-            super["clip"], super["data"], good_frames, vectors_string
-        )
+#         super = core.svp1.Super(good_frames, super_string)
+#         vectors = core.svp1.Analyse(
+#             super["clip"], super["data"], good_frames, vectors_string
+#         )
 
-        cur_interp = core.svp2.SmoothFps(
-            good_frames,
-            super["clip"],
-            super["data"],
-            vectors["clip"],
-            vectors["data"],
-            smooth_string,
-            src=good_frames,
-            fps=good_frames.fps,
-        )
+#         cur_interp = core.svp2.SmoothFps(
+#             good_frames,
+#             super["clip"],
+#             super["data"],
+#             vectors["clip"],
+#             vectors["data"],
+#             smooth_string,
+#             src=good_frames,
+#             fps=good_frames.fps,
+#         )
 
-        # trim edges (they're just the input frames)
-        cur_interp = cur_interp[1:-1]
+#         # trim edges (they're just the input frames)
+#         cur_interp = cur_interp[1:-1]
 
-        # combine the good frames with the interpolated ones so that vapoursynth can use them by indexing
-        # (i hate how you have to do this, there might be nicer way idk)
-        good_before = core.std.Trim(clip_1fps, first=0, last=n - 1)
-        good_after = core.std.Trim(clip_1fps, first=n + 1)
+#         # combine the good frames with the interpolated ones so that vapoursynth can use them by indexing
+#         # (i hate how you have to do this, there might be nicer way idk)
+#         good_before = core.std.Trim(clip_1fps, first=0, last=n - 1)
+#         good_after = core.std.Trim(clip_1fps, first=n + 1)
 
-        joined = good_before + cur_interp + good_after
+#         joined = good_before + cur_interp + good_after
 
-        out_video = core.std.AssumeFPS(joined, src=video)
+#         out_video = core.std.AssumeFPS(joined, src=video)
 
-        if debug:
-            return core.text.Text(
-                out_video,
-                f"interpolated, diff: {f.props['PlaneStatsDiff']:.3f}",
-                alignment=8,
-            )
+#         if debug:
+#             return core.text.Text(
+#                 out_video,
+#                 f"interpolated, diff: {f.props['PlaneStatsDiff']:.3f}",
+#                 alignment=8,
+#             )
 
-        return out_video
+#         return out_video
 
-    differences = core.std.PlaneStats(video, video[0] + video)
-    return core.std.FrameEval(video, selectFunc, prop_src=differences)
+#     differences = core.std.PlaneStats(video, video[0] + video)
+#     return core.std.FrameEval(video, selectFunc, prop_src=differences)
 
 
-def fill_drops_old_mvtools(clip, threshold=0.1, debug=False):
-    if not isinstance(clip, vs.VideoNode):
-        raise ValueError("This is not a clip")
+# def fill_drops_old_mvtools(clip, threshold=0.1, debug=False):
+#     if not isinstance(clip, vs.VideoNode):
+#         raise ValueError("This is not a clip")
 
-    differences = core.std.PlaneStats(clip, clip[0] + clip)
+#     differences = core.std.PlaneStats(clip, clip[0] + clip)
 
-    pel = 4
-    rfilter = 4
-    sharp = 0
-    blksize = 4
-    overlap = 2
-    search = 5
-    searchparam = 3
-    dct = 5
+#     pel = 4
+#     rfilter = 4
+#     sharp = 0
+#     blksize = 4
+#     overlap = 2
+#     search = 5
+#     searchparam = 3
+#     dct = 5
 
-    super = core.mv.Super(
-        clip, hpad=blksize, vpad=blksize, pel=pel, rfilter=rfilter, sharp=sharp
-    )
+#     super = core.mv.Super(
+#         clip, hpad=blksize, vpad=blksize, pel=pel, rfilter=rfilter, sharp=sharp
+#     )
 
-    analyse_args = dict(
-        blksize=blksize,
-        overlap=overlap,
-        search=search,
-        searchparam=searchparam,
-        dct=dct,
-    )
+#     analyse_args = dict(
+#         blksize=blksize,
+#         overlap=overlap,
+#         search=search,
+#         searchparam=searchparam,
+#         dct=dct,
+#     )
 
-    bv = core.mv.Analyse(super, isb=True, **analyse_args)
-    fv = core.mv.Analyse(super, isb=False, **analyse_args)
+#     bv = core.mv.Analyse(super, isb=True, **analyse_args)
+#     fv = core.mv.Analyse(super, isb=False, **analyse_args)
 
-    filldrops = core.mv.FlowInter(clip, super, mvbw=bv, mvfw=fv, ml=200)
+#     filldrops = core.mv.FlowInter(clip, super, mvbw=bv, mvfw=fv, ml=200)
 
-    def selectFunc(n, f):
-        if f.props["PlaneStatsDiff"] < threshold:
-            if debug:
-                return core.text.Text(
-                    filldrops,
-                    f"interpolated, diff: {f.props['PlaneStatsDiff']:.3f}",
-                    alignment=8,
-                )
+#     def selectFunc(n, f):
+#         if f.props["PlaneStatsDiff"] < threshold:
+#             if debug:
+#                 return core.text.Text(
+#                     filldrops,
+#                     f"interpolated, diff: {f.props['PlaneStatsDiff']:.3f}",
+#                     alignment=8,
+#                 )
 
-            return filldrops
-        else:
-            return clip
+#             return filldrops
+#         else:
+#             return clip
 
-    return core.std.FrameEval(clip, selectFunc, prop_src=differences)
+#     return core.std.FrameEval(clip, selectFunc, prop_src=differences)
