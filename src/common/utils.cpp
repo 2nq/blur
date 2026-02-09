@@ -4,8 +4,8 @@
 
 namespace {
 	bool init_hw = false;
-	// std::set<std::string> hw_accels; // TODO: re-add?
-	// std::set<std::string> hw_encoders;
+
+	std::unordered_map<std::string, bool> codec_available_map;
 }
 
 // NOLINTBEGIN gpt ass code
@@ -565,19 +565,80 @@ std::vector<std::string> u::get_available_gpu_types() {
 std::string u::get_primary_gpu_type() {
 	auto devices = get_hardware_encoding_devices();
 
-	// First try to find device marked as primary
 	for (const auto& device : devices) {
 		if (device.is_primary) {
 			return device.type;
 		}
 	}
 
-	// If no primary device found but we have devices, return the first one
 	if (!devices.empty()) {
 		return devices[0].type;
 	}
 
 	return "cpu";
+}
+
+bool u::test_codec(const std::string& codec) {
+	namespace bp = boost::process;
+
+	bp::ipstream error_stream;
+
+	auto c = u::run_command(
+		blur.ffmpeg_path,
+		{
+			"-loglevel",
+			"error",
+			"-f",
+			"lavfi",
+			"-i",
+			"nullsrc",
+			"-c:v",
+			codec,
+			"-frames:v",
+			"1",
+			"-f",
+			"null",
+			"-",
+		},
+		bp::std_out.null(),
+		bp::std_err > error_stream
+	);
+
+	c.wait();
+
+	return c.exit_code() == 0;
+}
+
+std::set<std::string> u::get_available_codecs(const std::set<std::string>& codecs) {
+	std::vector<std::future<std::pair<std::string, bool>>> futures;
+	futures.reserve(codecs.size());
+
+	std::set<std::string> result;
+
+	for (const auto& codec : codecs) {
+		if (codec_available_map.contains(codec)) {
+			if (codec_available_map[codec])
+				result.insert(codec);
+
+			continue;
+		}
+
+		futures.push_back(std::async(std::launch::async, [&codec]() {
+			bool available = test_codec(codec);
+			return std::make_pair(codec, available);
+		}));
+	}
+
+	for (auto& future : futures) {
+		auto [codec, available] = future.get();
+
+		codec_available_map[codec] = available;
+
+		if (available)
+			result.insert(codec);
+	}
+
+	return result;
 }
 
 std::vector<std::string> u::get_supported_presets(bool gpu_encoding, const std::string& gpu_type) {
@@ -586,12 +647,17 @@ std::vector<std::string> u::get_supported_presets(bool gpu_encoding, const std::
 
 	auto available_presets = config_presets::get_available_presets(gpu_encoding, gpu_type);
 
-	std::vector<std::string> filtered_presets;
-
+	std::set<std::string> all_codecs;
 	for (const auto& preset : available_presets) {
-		// if (hw_encoders.contains(preset.codec)) {
-		filtered_presets.push_back(preset.name);
-		// }
+		all_codecs.insert(preset.codec);
+	}
+
+	auto available_codecs = get_available_codecs(all_codecs);
+
+	std::vector<std::string> filtered_presets;
+	for (const auto& preset : available_presets) {
+		if (available_codecs.contains(preset.codec))
+			filtered_presets.push_back(preset.name);
 	}
 
 	return filtered_presets;

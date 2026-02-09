@@ -482,6 +482,9 @@ namespace u {
 	std::vector<std::string> get_available_gpu_types();
 	std::string get_primary_gpu_type();
 
+	bool test_codec(const std::string& codec);
+	std::set<std::string> get_available_codecs(const std::set<std::string>& codecs);
+
 	std::vector<std::string> get_supported_presets(bool gpu_encoding, const std::string& gpu_type);
 
 	std::vector<std::string> ffmpeg_string_to_args(const std::string& str);
