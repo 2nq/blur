@@ -220,7 +220,7 @@ def RIFE(video: vs.VideoNode, new_fps: int, model_path: str, gpu_index: int):
         )
     except vs.Error as e:
         raise u.BlurException(
-            user_error="Failed to initialise RIFE. Ensure your 'rife gpu' is set correctly.",
+            user_error="Failed to initialise RIFE. Ensure your 'rife gpu' is set correctly, and your GPU drivers are up to date. You may need to switch to a different interpolation method.",
             original_exception=e,
         )
 
