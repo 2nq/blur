@@ -877,42 +877,50 @@ std::vector<std::string> render::wrap_text(
 		return lines;
 
 	std::istringstream iss(text);
-	std::string word;
-	std::string current_line;
+	std::string line;
 
-	while (iss >> word) {
-		std::string test_line = current_line;
-		if (!test_line.empty())
-			test_line += ' ';
-		test_line += word;
+	while (std::getline(iss, line)) {
+		std::istringstream line_stream(line);
+		std::string word;
+		std::string current_line;
 
-		if (font.calc_size(test_line).w > dimensions.w) {
-			if (!current_line.empty()) {
-				lines.push_back(current_line);
-				current_line = word;
-			}
-			else {
-				// Word itself is too long, hard break
-				std::string sub_word;
-				for (char c : word) {
-					sub_word += c;
-					if (font.calc_size(sub_word).w > dimensions.w) {
-						if (sub_word.length() > 1) {
-							lines.push_back(sub_word.substr(0, sub_word.length() - 1));
-							sub_word = sub_word.back();
+		while (line_stream >> word) {
+			std::string test_line = current_line;
+			if (!test_line.empty())
+				test_line += ' ';
+			test_line += word;
+
+			if (font.calc_size(test_line).w > dimensions.w) {
+				if (!current_line.empty()) {
+					lines.push_back(current_line);
+					current_line = word;
+				}
+				else {
+					// Word itself is too long, hard break
+					std::string sub_word;
+					for (char c : word) {
+						sub_word += c;
+						if (font.calc_size(sub_word).w > dimensions.w) {
+							if (sub_word.length() > 1) {
+								lines.push_back(sub_word.substr(0, sub_word.length() - 1));
+								sub_word = sub_word.back();
+							}
 						}
 					}
+					current_line = sub_word;
 				}
-				current_line = sub_word;
+			}
+			else {
+				current_line = test_line;
 			}
 		}
-		else {
-			current_line = test_line;
-		}
-	}
 
-	if (!current_line.empty()) {
-		lines.push_back(current_line);
+		if (!current_line.empty()) {
+			lines.push_back(current_line);
+		}
+		else {
+			lines.push_back("");
+		}
 	}
 
 	return lines;
