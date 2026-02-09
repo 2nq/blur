@@ -259,14 +259,27 @@ void configs::options(ui::Container& container) {
 	*/
 	section_component("rendering");
 
-	ui::add_dropdown(
-		"codec dropdown",
-		container,
-		std::format("encode preset ({})", settings.gpu_encoding ? "gpu: " + app_settings.gpu_type : "cpu"),
-		u::get_supported_presets(settings.gpu_encoding, app_settings.gpu_type),
-		settings.encode_preset,
-		fonts::dejavu
-	);
+	auto presets = u::get_supported_presets(settings.gpu_encoding, app_settings.gpu_type);
+
+	if (presets.empty()) {
+		ui::add_text(
+			"no presets text",
+			container,
+			"no presets available. try toggling 'gpu encoding'",
+			gfx::Color(252, 186, 3, 150),
+			fonts::dejavu
+		);
+	}
+	else {
+		ui::add_dropdown(
+			"codec dropdown",
+			container,
+			std::format("encode preset ({})", settings.gpu_encoding ? "gpu: " + app_settings.gpu_type : "cpu"),
+			presets,
+			settings.encode_preset,
+			fonts::dejavu
+		);
+	}
 
 	if (settings.advanced.ffmpeg_override.empty()) {
 		std::vector<std::string> preset_args = config_presets::get_preset_params(

@@ -213,6 +213,17 @@ void tasks::start_pending_videos() {
 					"Using override config from video folder", ui::NotificationType::INFO
 				);
 		}
+
+		if (queue_config_res.error) {
+			gui::components::notifications::add(
+				std::format(
+					"Failed to queue '{}' for render: {}", pending_video->video_path.stem(), *queue_config_res.error
+				),
+				ui::NotificationType::NOTIF_ERROR,
+				{},
+				std::chrono::duration<float>(6.f)
+			);
+		}
 	}
 }
 

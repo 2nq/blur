@@ -827,6 +827,15 @@ rendering::QueueAddRes rendering::VideoRenderQueue::add(
 		!config_path.has_value() // use global only if no config path is specified
 	);
 
+	// check if preset is valid
+	auto valid_presets = u::get_supported_presets(config_res.config.gpu_encoding, app_settings.gpu_type);
+	if (!u::contains(valid_presets, config_res.config.encode_preset)) {
+		return {
+			.is_global_config = config_res.is_global,
+			.error = std::format("preset '{}' is not valid", config_res.config.encode_preset),
+		};
+	}
+
 	std::lock_guard lock(m_mutex);
 	auto added = m_queue.emplace_back(
 		VideoRenderDetails{
