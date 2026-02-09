@@ -34,12 +34,11 @@ def find_next_good_frame(clip, duplicate_index: int, threshold: float, max_frame
 
 
 def create_rife_interp(good_frames, duped_frames, model_path: str, gpu_index: int):
-    interp = core.rife.RIFE(
+    interp = blur.interpolate.RIFE(
         good_frames,
-        fps_num=duped_frames,
-        fps_den=1,
+        new_fps=duped_frames,
         model_path=model_path,
-        gpu_id=gpu_index,
+        gpu_index=gpu_index,
     )
 
     return interp[1 : 1 + duped_frames]  # first frame is a duplicate

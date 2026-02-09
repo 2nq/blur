@@ -194,6 +194,22 @@ def interpolate_mvtools(
     )
 
 
+def RIFE(video: vs.VideoNode, new_fps: int, model_path: str, gpu_index: int):
+    try:
+        return core.rife.RIFE(
+            video,
+            fps_num=new_fps,
+            fps_den=1,
+            model_path=model_path,
+            gpu_id=gpu_index,
+        )
+    except vs.Error as e:
+        raise u.BlurException(
+            user_error="Failed to initialise RIFE. Ensure your 'rife gpu' is set correctly.",
+            original_exception=e,
+        )
+
+
 def interpolate_rife(
     _video: vs.VideoNode,
     video_info: u.VideoInfo,
@@ -204,12 +220,11 @@ def interpolate_rife(
     u.check_model_path(model_path)
 
     def process(video):
-        return core.rife.RIFE(
+        return RIFE(
             video,
-            fps_num=new_fps,
-            fps_den=1,
+            new_fps=new_fps,
             model_path=model_path,
-            gpu_id=gpu_index,
+            gpu_index=gpu_index,
         )
 
     return u.with_format(
