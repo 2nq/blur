@@ -255,7 +255,7 @@ void rendering::detail::resume(int pid, const std::shared_ptr<RenderState>& stat
 	u::log("Render resumed");
 }
 
-tl::expected<rendering::detail::PipelineResult, std::string> rendering::detail::execute_pipeline(
+tl::expected<rendering::detail::PipelineResult, rendering::RenderError> rendering::detail::execute_pipeline(
 	RenderCommands commands,
 	const std::shared_ptr<RenderState>& state,
 	bool debug,
@@ -292,14 +292,26 @@ tl::expected<rendering::detail::PipelineResult, std::string> rendering::detail::
 		std::string audio_pipe_name;
 
 		if (mkfifo(video_pipe_name.c_str(), 0666) != 0) {
-			return tl::unexpected("Failed to create video pipe: " + std::string(strerror(errno)));
+			return tl::unexpected(
+				RenderError{
+					.user_message = "Failed to create video pipe",
+					.technical_details = "mkfifo error: " + std::string(strerror(errno)),
+					.is_blur_exception = false,
+				}
+			);
 		}
 
 		if (audio) {
 			audio_pipe_name = audio_pipe.string();
 			if (mkfifo(audio_pipe_name.c_str(), 0666) != 0) {
 				unlink(video_pipe_name.c_str());
-				return tl::unexpected("Failed to create audio pipe: " + std::string(strerror(errno)));
+				return tl::unexpected(
+					RenderError{
+						.user_message = "Failed to create audio pipe",
+						.technical_details = "mkfifo error: " + std::string(strerror(errno)),
+						.is_blur_exception = false,
+					}
+				);
 			}
 		}
 #endif
@@ -538,21 +550,52 @@ tl::expected<rendering::detail::PipelineResult, std::string> rendering::detail::
 		bool ffmpeg_failed = ffmpeg_process.exit_code() != 0;
 
 		if ((!commands.vspipe_will_stop_early && (vspipe_video_failed || vspipe_audio_failed)) || ffmpeg_failed) {
-			std::string error_msg = "--- [vspipe] ---\n" + vspipe_errors.str();
-
-			if (audio) {
-				error_msg += "--- [vspipe audio] ---\n" + vspipe_audio_errors.str() + "\n";
+			std::string process_errors;
+			if (!vspipe_errors.str().empty()) {
+				process_errors += "--- [vspipe] ---\n" + vspipe_errors.str() + "\n";
 			}
 
-			error_msg += "--- [ffmpeg] ---\n" + ffmpeg_errors.str();
+			if (audio && !vspipe_audio_errors.str().empty()) {
+				process_errors += "--- [vspipe audio] ---\n" + vspipe_audio_errors.str() + "\n";
+			}
 
-			return tl::unexpected(error_msg);
+			if (!ffmpeg_errors.str().empty()) {
+				process_errors += "--- [ffmpeg] ---\n" + ffmpeg_errors.str();
+			}
+
+			RenderError err;
+
+			auto parsed = u::parse_error_output(vspipe_errors.str());
+			if (parsed) {
+				err = *parsed;
+			}
+			else {
+				err.user_message = "An unexpected error occurred";
+				err.is_blur_exception = false;
+			}
+
+			// if exception isnt coming from blur, include process stderr streams for debugging
+			if (!err.is_blur_exception) {
+				if (!err.technical_details.empty()) {
+					err.technical_details += "\n\n";
+				}
+
+				err.technical_details += process_errors;
+			}
+
+			return tl::unexpected(err);
 		}
 
 		return PipelineResult{ .stopped = false };
 	}
 	catch (const std::exception& e) {
-		return tl::unexpected(std::string(e.what()));
+		return tl::unexpected(
+			RenderError{
+				.user_message = "An unexpected error occurred",
+				.technical_details = std::string("C++ exception: ") + e.what(),
+				.is_blur_exception = false,
+			}
+		);
 	}
 }
 
@@ -566,7 +609,7 @@ void rendering::detail::copy_file_timestamp(const std::filesystem::path& from, c
 	}
 }
 
-tl::expected<rendering::RenderResult, std::string> rendering::render_frame(
+tl::expected<rendering::RenderResult, std::variant<std::string, rendering::RenderError>> rendering::render_frame(
 	const std::filesystem::path& input_path,
 	const BlurSettings& settings,
 	const GlobalAppSettings& app_settings,
@@ -586,24 +629,30 @@ tl::expected<rendering::RenderResult, std::string> rendering::render_frame(
 	if (!output_path)
 		return tl::unexpected(output_path.error());
 
-	RenderCommands commands = { .vspipe_video = detail::build_vspipe_args(input_path, *merged_settings, true),.vspipe_audio = detail::build_vspipe_args(input_path, *merged_settings, false),
-		                        .ffmpeg = { "-loglevel",
-		                                    "error",
-		                                    "-hide_banner",
-		                                    "-stats",
-		                                    "-ss",
-		                                    "00:00:00.200",
-		                                    "-y",
-		                                    "-i",
-		                                    "{video_pipe}",
-											"-map",
-											"0:v",
-		                                    "-vframes",
-		                                    "1",
-		                                    "-q:v",
-		                                    "2",
-		                                    "-y",
-		                                    output_path->string(), }, .vspipe_will_stop_early = true, };
+	RenderCommands commands = {
+		.vspipe_video = detail::build_vspipe_args(input_path, *merged_settings, true),
+		.vspipe_audio = detail::build_vspipe_args(input_path, *merged_settings, false),
+		.ffmpeg = {
+			"-loglevel",
+			"error",
+			"-hide_banner",
+			"-stats",
+			"-ss",
+			"00:00:00.200",
+			"-y",
+			"-i",
+			"{video_pipe}",
+			"-map",
+			"0:v",
+			"-vframes",
+			"1",
+			"-q:v",
+			"2",
+			"-y",
+			output_path->string(),
+		},
+		.vspipe_will_stop_early = true,
+	};
 
 	auto pipeline_result = detail::execute_pipeline(commands, state, settings.advanced.debug, false, nullptr);
 	if (!pipeline_result)
@@ -612,17 +661,18 @@ tl::expected<rendering::RenderResult, std::string> rendering::render_frame(
 	return RenderResult{ .output_path = *output_path, .stopped = pipeline_result->stopped };
 }
 
-tl::expected<rendering::RenderResult, std::string> rendering::detail::render_video(
-	const std::filesystem::path& input_path,
-	const u::VideoInfo& video_info,
-	const BlurSettings& settings,
-	const std::shared_ptr<RenderState>& state,
-	const GlobalAppSettings& app_settings,
-	const std::optional<std::filesystem::path>& output_path_override,
-	float start,
-	float end,
-	const std::function<void()>& progress_callback
-) {
+tl::expected<rendering::RenderResult, std::variant<std::string, rendering::RenderError>> rendering::detail::
+	render_video(
+		const std::filesystem::path& input_path,
+		const u::VideoInfo& video_info,
+		const BlurSettings& settings,
+		const std::shared_ptr<RenderState>& state,
+		const GlobalAppSettings& app_settings,
+		const std::optional<std::filesystem::path>& output_path_override,
+		float start,
+		float end,
+		const std::function<void()>& progress_callback
+	) {
 	if (!blur.initialised)
 		return tl::unexpected("Blur not initialised");
 	if (!std::filesystem::exists(input_path))
@@ -816,9 +866,10 @@ rendering::QueueAddRes rendering::VideoRenderQueue::add(
 	float start,
 	float end,
 	const std::function<void()>& progress_callback,
-	const std::function<
-		void(const VideoRenderDetails& render, const tl::expected<rendering::RenderResult, std::string>& result)>&
-		finish_callback
+	const std::function<void(
+		const VideoRenderDetails& render,
+		const tl::expected<rendering::RenderResult, std::variant<std::string, RenderError>>& result
+	)>& finish_callback
 ) {
 	// parse config file (do it now, not when rendering. nice for batch rendering the same file with different
 	// settings)

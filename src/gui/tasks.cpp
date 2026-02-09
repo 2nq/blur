@@ -201,7 +201,7 @@ void tasks::start_pending_videos() {
 			pending_video->end,
 			{},
 			[](const rendering::VideoRenderDetails& render,
-		       const tl::expected<rendering::RenderResult, std::string>& result) {
+		       const tl::expected<rendering::RenderResult, std::variant<std::string, rendering::RenderError>>& result) {
 				gui::renderer::on_render_finished(render, result);
 			}
 		);

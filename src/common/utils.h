@@ -1,3 +1,5 @@
+#include <utility>
+
 #pragma once
 
 #ifdef _DEBUG
@@ -502,4 +504,16 @@ namespace u {
 #ifdef WIN32
 	bool windows_toggle_suspend_process(DWORD pid, bool to_suspend);
 #endif
+
+	struct ParsedError {
+		std::string user_message;
+		std::string technical_details;
+		bool is_blur_exception = false;
+
+		[[nodiscard]] std::string to_string() const {
+			return user_message + "\n\n" + technical_details;
+		}
+	};
+
+	tl::expected<ParsedError, std::string> parse_error_output(const std::string& stderr_output);
 }

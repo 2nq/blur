@@ -16,6 +16,8 @@ namespace rendering {
 		bool stopped = false;
 	};
 
+	using RenderError = u::ParsedError;
+
 	struct RenderState;
 
 	namespace detail {
@@ -24,7 +26,7 @@ namespace rendering {
 		void pause(int pid, const std::shared_ptr<RenderState>& state);
 		void resume(int pid, const std::shared_ptr<RenderState>& state);
 
-		tl::expected<PipelineResult, std::string> execute_pipeline(
+		tl::expected<PipelineResult, RenderError> execute_pipeline(
 			RenderCommands commands,
 			const std::shared_ptr<RenderState>& state,
 			bool debug,
@@ -32,7 +34,7 @@ namespace rendering {
 			const std::function<void()>& progress_callback
 		);
 
-		tl::expected<RenderResult, std::string> render_video(
+		tl::expected<RenderResult, std::variant<std::string, RenderError>> render_video(
 			const std::filesystem::path& input_path,
 			const u::VideoInfo& video_info,
 			const BlurSettings& settings,
@@ -97,7 +99,7 @@ namespace rendering {
 		friend void detail::pause(int pid, const std::shared_ptr<RenderState>& state);
 		friend void detail::resume(int pid, const std::shared_ptr<RenderState>& state);
 
-		friend tl::expected<detail::PipelineResult, std::string> detail::execute_pipeline(
+		friend tl::expected<detail::PipelineResult, RenderError> detail::execute_pipeline(
 			RenderCommands commands,
 			const std::shared_ptr<RenderState>& state,
 			bool debug,
@@ -105,7 +107,7 @@ namespace rendering {
 			const std::function<void()>& progress_callback
 		);
 
-		friend tl::expected<RenderResult, std::string> detail::render_video(
+		friend tl::expected<RenderResult, std::variant<std::string, RenderError>> detail::render_video(
 			const std::filesystem::path& input_path,
 			const u::VideoInfo& video_info,
 			const BlurSettings& settings,
@@ -139,8 +141,10 @@ namespace rendering {
 		float end;
 
 		std::function<void()> progress_callback;
-		std::function<
-			void(const VideoRenderDetails& render, const tl::expected<rendering::RenderResult, std::string>& result)>
+		std::function<void(
+			const VideoRenderDetails& render,
+			const tl::expected<rendering::RenderResult, std::variant<std::string, RenderError>>& result
+		)>
 			finish_callback;
 
 		std::shared_ptr<RenderState> state = std::make_shared<RenderState>();
@@ -198,7 +202,8 @@ namespace rendering {
 			float end = 1.f,
 			const std::function<void()>& progress_callback = {},
 			const std::function<void(
-				const VideoRenderDetails& render, const tl::expected<rendering::RenderResult, std::string>& result
+				const VideoRenderDetails& render,
+				const tl::expected<rendering::RenderResult, std::variant<std::string, RenderError>>& result
 			)>& finish_callback = {}
 		);
 
@@ -279,7 +284,7 @@ namespace rendering {
 
 	inline VideoRenderQueue video_render_queue;
 
-	tl::expected<RenderResult, std::string> render_frame(
+	tl::expected<RenderResult, std::variant<std::string, RenderError>> render_frame(
 		const std::filesystem::path& input_path,
 		const BlurSettings& settings,
 		const GlobalAppSettings& app_settings = config_app::get_app_config(),

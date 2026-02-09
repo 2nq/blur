@@ -927,3 +927,30 @@ bool u::windows_toggle_suspend_process(DWORD pid, bool to_suspend) {
 	return true;
 }
 #endif
+
+tl::expected<u::ParsedError, std::string> u::parse_error_output(const std::string& stderr_output) {
+	ParsedError result;
+	result.is_blur_exception = false;
+
+	size_t json_start = stderr_output.find('{');
+	size_t json_end = stderr_output.rfind('}');
+
+	if (json_start != std::string::npos && json_end != std::string::npos && json_end > json_start) {
+		try {
+			std::string json_str = stderr_output.substr(json_start, json_end - json_start + 1);
+			auto json = nlohmann::json::parse(json_str);
+
+			if (json.contains("error_type") && json["error_type"] == "BlurException") {
+				result.is_blur_exception = true;
+				result.user_message = json.value("user_message", "An error occurred during processing");
+				result.technical_details = json.value("technical_details", stderr_output);
+				return result;
+			}
+		}
+		catch (const nlohmann::json::exception& e) {
+			DEBUG_LOG("Failed to parse JSON error: {}", e.what());
+		}
+	}
+
+	return tl::unexpected(stderr_output);
+}

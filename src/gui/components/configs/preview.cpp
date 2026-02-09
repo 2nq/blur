@@ -74,8 +74,8 @@ void configs::config_preview(ui::Container& container) {
 
 			auto res = rendering::render_frame(sample_video_path, local_settings, local_app_settings, state->state);
 
-			if (state ==
-			    render_states.back()) { // todo: this should be correct right? any cases where this doesn't work?
+			if (state == render_states.back())
+			{ // todo: this should be correct right? any cases where this doesn't work?
 				loading = false;
 
 				if (res) {
@@ -89,24 +89,9 @@ void configs::config_preview(ui::Container& container) {
 					u::log("config preview finished rendering");
 				}
 				else {
-					if (res.error() != "Input path does not exist") {
-						gui::components::notifications::add(
-							"Failed to generate config preview. Click to copy error message",
-							ui::NotificationType::NOTIF_ERROR,
-							[res](const std::string& id) {
-								SDL_SetClipboardText(res.error().c_str());
-
-								gui::components::notifications::close(id);
-
-								gui::components::notifications::add(
-									"Copied error message to clipboard",
-									ui::NotificationType::INFO,
-									{},
-									std::chrono::duration<float>(2.f)
-								);
-							}
-						);
-					}
+					components::notifications::show_failure_notification(
+						"Failed to generate config preview.", res.error(), std::chrono::duration<float>(10.f)
+					);
 				}
 			}
 

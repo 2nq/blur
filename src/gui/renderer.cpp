@@ -335,33 +335,21 @@ bool gui::renderer::redraw_window(bool rendered_last, bool want_to_render) {
 }
 
 void gui::renderer::on_render_finished(
-	const rendering::VideoRenderDetails& render, const tl::expected<rendering::RenderResult, std::string>& result
+	const rendering::VideoRenderDetails& render,
+	const tl::expected<rendering::RenderResult, std::variant<std::string, rendering::RenderError>>& result
 ) {
 	std::string video_name = u::path_to_string(render.input_path.stem());
 
 	if (!result) {
-		gui::components::notifications::add(
-			std::format("Render '{}' failed. Click to copy error message", video_name),
-			ui::NotificationType::NOTIF_ERROR,
-			[result](const std::string& id) {
-				SDL_SetClipboardText(result.error().c_str());
-
-				gui::components::notifications::close(id);
-
-				gui::components::notifications::add(
-					"Copied error message to clipboard",
-					ui::NotificationType::INFO,
-					{},
-					std::chrono::duration<float>(2.f)
-				);
-			},
-			std::nullopt
+		components::notifications::show_failure_notification(
+			std::format("Render '{}' failed.", video_name), result.error(), std::nullopt
 		);
 
 		auto app_config = config_app::get_app_config();
 		if (app_config.render_failure_notifications) {
-			desktop_notification::show("Blur render failed", u::truncate_with_ellipsis(result.error(), 100));
+			desktop_notification::show("Blur render failed", std::format("Failed to render video {}", video_name));
 		}
+
 		return;
 	}
 

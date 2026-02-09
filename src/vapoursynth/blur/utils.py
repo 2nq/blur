@@ -1,13 +1,58 @@
 import vapoursynth as vs
 from vapoursynth import core
 
+import sys
+import json
+import traceback
 from pathlib import Path
 from fractions import Fraction
 from dataclasses import dataclass
 
 
 class BlurException(Exception):
-    pass
+    def __init__(
+        self,
+        user_error: str,
+        original_exception: Exception | None = None,
+    ):
+        self.user_error = user_error
+        self.original_exception = original_exception
+
+        tech_parts = []
+        if original_exception:
+            tech_parts.append(
+                f"Original error: {type(original_exception).__name__}: {str(original_exception)}"
+            )
+            tech_parts.append(
+                f"Traceback:\n{''.join(traceback.format_tb(original_exception.__traceback__))}"
+            )
+
+        self.full_technical_details = "\n".join(tech_parts)
+
+        super().__init__(user_error)
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "error_type": "BlurException",
+                "user_message": self.user_error,
+                "technical_details": self.full_technical_details,
+            },
+            indent=2,
+        )
+
+
+def handle_blur_exception(e: BlurException):
+    print(e.to_json(), file=sys.stderr)
+    sys.exit(1)
+
+
+def handle_unexpected_exception(e: Exception):
+    blur_ex = BlurException(
+        user_error="An unexpected error occurred during VapourSynth processing.",
+        original_exception=e,
+    )
+    handle_blur_exception(blur_ex)
 
 
 @dataclass
