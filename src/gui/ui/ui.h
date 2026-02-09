@@ -483,6 +483,8 @@ namespace ui {
 	void render_button(const Container& container, const AnimatedElement& element);
 	bool update_button(const Container& container, AnimatedElement& element);
 
+	inline const int NOTIFICATION_DEFAULT_W = 270;
+
 	void render_notification(const Container& container, const AnimatedElement& element);
 	bool update_notification(const Container& container, AnimatedElement& element);
 

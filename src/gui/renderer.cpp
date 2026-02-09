@@ -129,7 +129,7 @@ bool gui::renderer::redraw_window(bool rendered_last, bool want_to_render) {
 	);
 
 	gfx::Rect notification_container_rect = rect;
-	notification_container_rect.w = 230;
+	notification_container_rect.w = ui::NOTIFICATION_DEFAULT_W;
 	notification_container_rect.x =
 		rect.x2() - notification_container_rect.w - components::notifications::NOTIFICATIONS_PAD_X;
 	notification_container_rect.h = 300;
