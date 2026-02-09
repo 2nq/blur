@@ -15,11 +15,36 @@ import blur.interpolate
 import blur.weighting
 import blur.utils as u
 
+EXPECTED_PLUGINS = [
+    "com.holywu.rife",
+    "com.nodame.mvtools",
+    "com.svp-team.flow1",
+    "com.svp-team.flow2",
+    "com.vapoursynth.bestsource",
+    "com.vapoursynth.resize",
+    "com.vapoursynth.std",
+    "com.vapoursynth.text",
+    "com.yuygfgg.adjust",
+    "fmtconv",
+    "info.akarin.vsplugin",
+    "nz.anima.frameblender",
+]
+
 try:
     if vars().get("macos_bundled") == "true":
         u.load_plugins(".dylib")
     elif vars().get("linux_bundled") == "true":
         u.load_plugins(".so")
+
+    loaded_plugins = [plugin.identifier for plugin in core.plugins()]
+
+    missing_plugins = [
+        plugin for plugin in EXPECTED_PLUGINS if plugin not in loaded_plugins
+    ]
+    if missing_plugins:
+        raise u.BlurException(
+            f"Missing required VapourSynth extension{'s' if len(missing_plugins) != 1 else ''}: {', '.join(missing_plugins)}"
+        )
 
     video_path = Path(vars().get("video_path", ""))
 
