@@ -167,36 +167,42 @@ def with_format(
     target_format,
     process_func,
 ):
-    orig_format = video.format
-    needs_conversion = orig_format.id != target_format
+    try:
+        orig_format = video.format
+        needs_conversion = orig_format.id != target_format
 
-    if needs_conversion:
-        convert_kwargs = {
-            "format": target_format,
-            "range_in": video_info.is_full_color_range,
-            "range": video_info.is_full_color_range,
-        }
+        if needs_conversion:
+            convert_kwargs = {
+                "format": target_format,
+                "range_in": video_info.is_full_color_range,
+                "range": video_info.is_full_color_range,
+            }
 
-        if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
-            convert_kwargs["matrix_in_s"] = "709"
+            if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
+                convert_kwargs["matrix_in_s"] = "709"
 
-        if video_info.resize_chromaloc is not None:
-            convert_kwargs["chromaloc_s"] = video_info.resize_chromaloc
+            if video_info.resize_chromaloc is not None:
+                convert_kwargs["chromaloc_s"] = video_info.resize_chromaloc
 
-        video = core.resize.Point(video, **convert_kwargs)
+            video = core.resize.Point(video, **convert_kwargs)
 
-    video = process_func(video)
+        video = process_func(video)
 
-    if needs_conversion:
-        convert_back_kwargs = {
-            "format": orig_format.id,
-            "range_in": video_info.is_full_color_range,
-            "range": video_info.is_full_color_range,
-        }
+        if needs_conversion:
+            convert_back_kwargs = {
+                "format": orig_format.id,
+                "range_in": video_info.is_full_color_range,
+                "range": video_info.is_full_color_range,
+            }
 
-        if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
-            convert_back_kwargs["matrix_s"] = "709"
+            if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
+                convert_back_kwargs["matrix_s"] = "709"
 
-        video = core.resize.Point(video, **convert_back_kwargs)
+            video = core.resize.Point(video, **convert_back_kwargs)
 
-    return video
+        return video
+    except Exception as e:
+        raise BlurException(
+            "Failed to convert video format. You may need to convert your input video's colourspace manually.",
+            e,
+        )
