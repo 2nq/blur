@@ -194,7 +194,7 @@ try:
                     return int(fps_value)
                 except ValueError:
                     raise u.BlurException(
-                        f"Invalid FPS {setting_key}: '{fps_value}' - failed to parse it as an integer. Is it an integer?"
+                        f"Invalid FPS {setting_key}: '{fps_value}'. It should be either a whole number or a multiplier (e.g. 5x)"
                     )
 
         interpolated_fps = parse_fps_setting("interpolated_fps")
