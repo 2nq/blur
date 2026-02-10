@@ -189,7 +189,7 @@ def with_format(
         raise
     except Exception as e:
         raise BlurException(
-            "Failed to convert video format. You may need to convert your input video's colourspace manually.",
+            "Failed to convert video format. You may need to convert your input video's colorspace manually.",
             e,
         )
 
