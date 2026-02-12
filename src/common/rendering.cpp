@@ -386,19 +386,7 @@ tl::expected<rendering::detail::PipelineResult, rendering::RenderError> renderin
 			std::string line;
 			char ch = 0;
 			while (vspipe_stderr.get(ch)) {
-				if (ch == '\n') {
-					vspipe_errors << line << '\n';
-
-					DEBUG_LOG("[vspipe error] {}", line);
-
-#ifdef _WIN32
-					if (line == "Waiting for client to connect to named pipe...")
-						vspipe_ready = true;
-#endif
-
-					line.clear();
-				}
-				else if (ch == '\r') {
+				if (ch == '\r') {
 					static std::regex frame_regex(R"(Frame: (\d+)\/(\d+)(?: \((\d+\.\d+) fps\))?)");
 
 					std::smatch match;
@@ -447,38 +435,30 @@ tl::expected<rendering::detail::PipelineResult, rendering::RenderError> renderin
 
 						if (progress_callback)
 							progress_callback();
+
+						line.clear();
 					}
 
+					continue;
+				}
+
+				if (ch == '\n') {
+					vspipe_errors << line << '\n';
+
+					DEBUG_LOG("[vspipe error] {}", line);
+
 					line.clear();
+					continue;
 				}
-				else {
-					line += ch;
-				}
+
+				line += ch;
 			}
 
-			// process any remaining data in the pipe
-			std::string remaining;
-			while (std::getline(vspipe_stderr, remaining)) {
-				vspipe_errors << remaining << '\n';
+			if (!line.empty()) {
+				vspipe_errors << line << '\n';
+				DEBUG_LOG("[vspipe error] {}", line);
 			}
 		});
-
-		std::unique_ptr<std::thread> vspipe_audio_stderr_thread;
-		if (audio) {
-			vspipe_audio_stderr_thread = std::make_unique<std::thread>([&]() {
-				std::string line;
-				while (std::getline(vspipe_audio_stderr, line)) {
-					vspipe_audio_errors << line << '\n';
-
-#ifdef _WIN32
-					if (line == "Waiting for client to connect to named pipe...")
-						vspipe_audio_ready = true;
-#endif
-
-					DEBUG_LOG("[vspipe audio error] {}", line);
-				}
-			});
-		}
 
 		std::thread ffmpeg_stderr_thread([&]() {
 			std::string line;
