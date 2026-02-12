@@ -27,7 +27,6 @@ EXPECTED_PLUGINS = [
     "com.yuygfgg.adjust",
     "fmtconv",
     "info.akarin.vsplugin",
-    "nz.anima.frameblender",
 ]
 
 try:
