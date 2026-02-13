@@ -64,7 +64,9 @@ std::string config_blur::generate_config_string(const BlurSettings& settings, bo
 	if (!concise || settings.copy_dates) {
 		output << "copy dates: " << (settings.copy_dates ? "true" : "false") << "\n";
 	}
-	output << "upscale: " << (settings.upscale ? "true" : "false") << "\n";
+	if (!concise || settings.upscale) {
+		output << "upscale: " << (settings.upscale ? "true" : "false") << "\n";
+	}
 
 	// GPU acceleration section
 	if (!concise || settings.gpu_decoding || settings.gpu_interpolation || settings.gpu_encoding) {
