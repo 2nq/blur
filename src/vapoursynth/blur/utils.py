@@ -161,6 +161,27 @@ def with_scaled_luminance(
     return video
 
 
+def guess_matrix(width: int, height: int) -> int:
+    if height >= 720 or width >= 1280:
+        return vs.MATRIX_BT709
+    else:
+        return vs.MATRIX_ST170_M  # BT601, standard for SD
+
+
+def guess_transfer(width: int, height: int) -> int:
+    if height >= 720 or width >= 1280:
+        return vs.TRANSFER_BT709
+    else:
+        return vs.TRANSFER_BT601
+
+
+def guess_primaries(width: int, height: int) -> int:
+    if height >= 720 or width >= 1280:
+        return vs.PRIMARIES_BT709
+    else:
+        return vs.PRIMARIES_ST170_M  # BT601
+
+
 def with_format(
     video: vs.VideoNode,
     video_info: VideoInfo,
@@ -179,10 +200,28 @@ def with_format(
             }
 
             if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
-                convert_kwargs["matrix_in_s"] = "709"
+                # @HACK - some videos (adobe -_-) dont set the color transfer & primaries for example which means resizing fails cause it doesnt have the required information
+                # here im just making educated guesses as to what they are but this is so dumb
+                props = dict(video.get_frame(0).props)
+
+                set_props = {}
+
+                if props.get("_Matrix", 0) in {0, vs.MATRIX_UNSPECIFIED}:
+                    set_props["_Matrix"] = guess_matrix(video.width, video.height)
+
+                if props.get("_Transfer", 0) in {0, vs.TRANSFER_UNSPECIFIED}:
+                    set_props["_Transfer"] = guess_transfer(video.width, video.height)
+
+                if props.get("_Primaries", 0) in {0, vs.PRIMARIES_UNSPECIFIED}:
+                    set_props["_Primaries"] = guess_primaries(video.width, video.height)
+
+                if set_props:
+                    video = core.std.SetFrameProps(video, **set_props)
 
             if video_info.resize_chromaloc is not None:
                 convert_kwargs["chromaloc_s"] = video_info.resize_chromaloc
+
+            print(convert_kwargs)
 
             video = core.resize.Point(video, **convert_kwargs)
     except BlurException:
