@@ -290,92 +290,80 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 			"-show_entries",
 			"format=duration",
 			"-of",
-			"default=noprint_wrappers=1",
+			"json",
 			u::path_to_string(path),
 		},
 		bp::std_out > pipe_stream,
 		bp::std_err.null()
 	);
 
+	std::string output(std::istreambuf_iterator<char>(pipe_stream), {});
+
+	c.wait();
+
+	DEBUG_LOG("[ffprobe] {}", output);
+
+	const auto j = nlohmann::json::parse(output);
+
 	VideoInfo info;
 
-	std::string line;
-	std::string current_codec_type;
-	size_t video_index = -1;
+	// format
+	if (j.contains("format")) {
+		const auto& fmt = j["format"];
 
-	while (pipe_stream && std::getline(pipe_stream, line)) {
-		boost::algorithm::trim(line);
+		if (fmt.contains("duration"))
+			info.duration = std::stod(fmt["duration"].get<std::string>());
+	}
 
-		DEBUG_LOG("[ffprobe] {}", line);
+	// streams
+	bool first_video_stream = false;
 
-		auto eq = line.find('=');
-		if (eq == std::string::npos)
-			continue;
+	for (const auto& stream : j.value("streams", nlohmann::json::array())) {
+		const auto codec_type = stream.value("codec_type", "");
 
-		std::string key = line.substr(0, eq);
-		std::string value = line.substr(eq + 1);
+		if (codec_type == "video") {
+			info.has_video_stream = true;
 
-		if (key == "codec_type") {
-			current_codec_type = value;
-
-			if (value == "video") {
-				info.has_video_stream = true;
-				video_index++;
-			}
-
-			continue;
-		}
-
-		if (key == "duration") {
-			info.duration = std::stod(value);
-			continue;
-		}
-
-		if (current_codec_type == "video") {
-			if (video_index != 0)
+			if (first_video_stream)
 				continue;
 
-			if (key == "color_range") {
-				info.color_range = value;
+			first_video_stream = true;
+
+			info.width = stream.value("width", 0);
+			info.height = stream.value("height", 0);
+			info.pix_fmt = stream.value("pix_fmt", "");
+			info.color_range = stream.value("color_range", "");
+			info.color_space = stream.value("color_space", "");
+
+			if (stream.contains("color_transfer") &&
+			    (stream["color_transfer"] != "unknown" && stream["color_transfer"] != "reserved"))
+			{
+				info.color_transfer = stream["color_transfer"];
 			}
-			else if (key == "pix_fmt") {
-				info.pix_fmt = value;
+
+			if (stream.contains("color_primaries") &&
+			    (stream["color_primaries"] != "unknown" && stream["color_primaries"] != "reserved"))
+			{
+				info.color_primaries = stream["color_primaries"];
 			}
-			else if (key == "color_space") {
-				info.color_space = value;
-			}
-			else if (key == "color_transfer") {
-				info.color_transfer = value;
-			}
-			else if (key == "color_primaries") {
-				info.color_primaries = value;
-			}
-			else if (key == "r_frame_rate") {
-				auto fps = u::split_string(value, "/");
+
+			if (stream.contains("r_frame_rate")) {
+				const auto fps = u::split_string(stream["r_frame_rate"].get<std::string>(), "/");
 				info.fps_num = std::stoi(fps[0]);
 				info.fps_den = std::stoi(fps[1]);
 			}
-			else if (key == "width") {
-				info.width = std::stoi(value);
-			}
-			else if (key == "height") {
-				info.height = std::stoi(value);
-			}
-			else if (key == "start_time") {
-				info.video_start_time = std::stod(value);
-			}
+
+			if (stream.contains("start_time"))
+				info.video_start_time = std::stod(stream["start_time"].get<std::string>());
 		}
-		else if (current_codec_type == "audio") {
-			if (key == "sample_rate") {
-				info.audio_sample_rates.push_back(std::stoi(value));
-			}
-			else if (key == "start_time") {
-				info.audio_start_times.push_back(std::stod(value));
-			}
+		else if (codec_type == "audio") {
+			if (stream.contains("sample_rate"))
+				info.audio_sample_rates.push_back(std::stoi(stream["sample_rate"].get<std::string>()));
+
+			if (stream.contains("start_time"))
+				info.audio_start_times.push_back(std::stod(stream["start_time"].get<std::string>()));
 		}
 	}
-
-	c.wait();
 
 	return info;
 }
