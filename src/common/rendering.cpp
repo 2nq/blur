@@ -19,29 +19,21 @@ tl::expected<nlohmann::json, std::string> rendering::detail::merge_settings(
 }
 
 std::vector<std::string> rendering::detail::build_vspipe_args(
-	const std::filesystem::path& input_path, const nlohmann::json& merged_settings, bool is_video
+	const std::filesystem::path& input_path, const nlohmann::json& merged_settings
 ) {
 	std::string path_str = u::path_to_string(input_path);
 	std::ranges::replace(path_str, '\\', '/');
 
 	std::vector<std::string> args = {
-		"-p",
-		"-o",
-		is_video ? "0" : "1",
-		"-c",
-		is_video ? "y4m" : "wav",
-		"-a",
-		"video_path=" + path_str,
-		"-a",
-		"settings=" + merged_settings.dump(),
+		"-p", "-c", "y4m", "-a", "video_path=" + path_str, "-a", "settings=" + merged_settings.dump(),
 	};
 
 #ifdef __APPLE__
 	args.insert(args.end(), { "-a", std::format("macos_bundled={}", blur.used_installer ? "true" : "false") });
 #endif
-#ifdef _WIN32
-	args.insert(args.end(), { "-a", "enable_lsmash=true" });
-#endif
+// #ifdef _WIN32
+// 	args.insert(args.end(), { "-a", "enable_lsmash=true" });
+// #endif
 #ifdef __linux__
 	bool bundled = std::filesystem::exists(blur.resources_path / "vapoursynth-plugins");
 	args.insert(args.end(), { "-a", std::format("linux_bundled={}", bundled ? "true" : "false") });
@@ -111,108 +103,6 @@ tl::expected<std::filesystem::path, std::string> rendering::detail::build_output
 	return result;
 }
 
-std::vector<std::string> rendering::detail::build_color_metadata_args(const u::VideoInfo& video_info) {
-	std::vector<std::string> params;
-
-	if (video_info.color_range) {
-		std::string range = *video_info.color_range == "pc" ? "full" : "limited";
-		params.emplace_back("range=" + range);
-	}
-
-	if (video_info.color_space)
-		params.emplace_back("colorspace=" + *video_info.color_space);
-
-	if (video_info.color_transfer)
-		params.emplace_back("color_trc=" + *video_info.color_transfer);
-
-	if (video_info.color_primaries)
-		params.emplace_back("color_primaries=" + *video_info.color_primaries);
-
-	if (params.empty())
-		return {};
-
-	std::string filter =
-		"setparams=" +
-		std::accumulate(
-			std::next(params.begin()), params.end(), params[0], [](const std::string& a, const std::string& b) {
-				return a + ":" + b;
-			}
-		);
-
-	std::vector<std::string> result = { "-vf", filter };
-
-	if (video_info.pix_fmt) {
-		result.insert(result.end(), { "-pix_fmt", *video_info.pix_fmt });
-	}
-
-	return result;
-}
-
-std::vector<std::string> rendering::detail::build_audio_filter_args(
-	const BlurSettings& settings, const u::VideoInfo& video_info
-) {
-	if (!settings.timescale)
-		return {};
-
-	std::vector<std::string> filters;
-	int sample_rate = video_info.sample_rate != -1 ? video_info.sample_rate : 48000;
-
-	if (settings.input_timescale != 1.0f) {
-		filters.push_back(std::format("asetrate={}*{}", sample_rate, 1.0f / settings.input_timescale));
-		filters.push_back("aresample=48000");
-	}
-
-	if (settings.output_timescale != 1.0f) {
-		if (settings.output_timescale_audio_pitch) {
-			filters.push_back(std::format("asetrate={}*{}", sample_rate, settings.output_timescale));
-			filters.push_back("aresample=48000");
-		}
-		else {
-			filters.push_back(std::format("atempo={}", settings.output_timescale));
-		}
-	}
-
-	if (filters.empty())
-		return {};
-
-	std::string combined = std::accumulate(
-		std::next(filters.begin()), filters.end(), filters[0], [](const std::string& a, const std::string& b) {
-			return a + "," + b;
-		}
-	);
-
-	return { "-af", combined };
-}
-
-std::vector<std::string> rendering::detail::build_encoding_args(
-	const BlurSettings& settings, const GlobalAppSettings& app_settings
-) {
-	if (!settings.advanced.ffmpeg_override.empty()) {
-		auto args = u::ffmpeg_string_to_args(settings.advanced.ffmpeg_override);
-		std::vector<std::string> result;
-		result.reserve(args.size());
-		for (const auto& arg : args) {
-			result.push_back(arg);
-		}
-		return result;
-	}
-
-	auto preset_args = config_presets::get_preset_params(
-		settings.gpu_encoding ? app_settings.gpu_type : "cpu",
-		u::to_lower(settings.encode_preset.empty() ? "h264" : settings.encode_preset),
-		settings.quality
-	);
-
-	std::vector<std::string> result;
-	result.reserve(preset_args.size());
-	for (const auto& arg : preset_args) {
-		result.push_back(arg);
-	}
-
-	result.insert(result.end(), { "-c:a", "aac", "-b:a", "320k", "-movflags", "+faststart" });
-	return result;
-}
-
 void rendering::detail::pause(int pid, const std::shared_ptr<RenderState>& state) {
 	if (state->m_paused)
 		return;
@@ -256,7 +146,7 @@ void rendering::detail::resume(int pid, const std::shared_ptr<RenderState>& stat
 }
 
 tl::expected<rendering::detail::PipelineResult, rendering::RenderError> rendering::detail::execute_pipeline(
-	RenderCommands commands,
+	const RenderCommands& commands,
 	const std::shared_ptr<RenderState>& state,
 	bool debug,
 	bool audio,
@@ -267,120 +157,21 @@ tl::expected<rendering::detail::PipelineResult, rendering::RenderError> renderin
 	try {
 		auto env = u::setup_vspipe_environment();
 
-		// create temporary named pipes
-		auto temp_dir = std::filesystem::temp_directory_path();
-		auto video_pipe =
-			temp_dir / ("blur_video_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-
-		std::filesystem::path audio_pipe;
-		if (audio) {
-			audio_pipe = temp_dir /
-			             ("blur_audio_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-		}
-
-#ifdef _WIN32
-		std::string video_pipe_name = R"(\\.\pipe\blur_video_)" + std::to_string(GetCurrentProcessId()) + "_" +
-		                              std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-		std::string audio_pipe_name;
-		if (audio) {
-			audio_pipe_name = R"(\\.\pipe\blur_audio_)" + std::to_string(GetCurrentProcessId()) + "_" +
-			                  std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-		}
-#else
-		// Unix FIFOs
-		std::string video_pipe_name = video_pipe.string();
-		std::string audio_pipe_name;
-
-		if (mkfifo(video_pipe_name.c_str(), 0666) != 0) {
-			return tl::unexpected(
-				RenderError{
-					.user_message = "Failed to create video pipe",
-					.technical_details = "mkfifo error: " + std::string(strerror(errno)),
-					.is_blur_exception = false,
-				}
-			);
-		}
-
-		if (audio) {
-			audio_pipe_name = audio_pipe.string();
-			if (mkfifo(audio_pipe_name.c_str(), 0666) != 0) {
-				unlink(video_pipe_name.c_str());
-				return tl::unexpected(
-					RenderError{
-						.user_message = "Failed to create audio pipe",
-						.technical_details = "mkfifo error: " + std::string(strerror(errno)),
-						.is_blur_exception = false,
-					}
-				);
-			}
-		}
-#endif
+		bp::pipe vspipe_stdout;
 
 		bp::ipstream vspipe_stderr;
-		bp::ipstream vspipe_audio_stderr;
 		bp::ipstream ffmpeg_stderr;
 
-		// replace vspipe video placeholder
-		for (auto& arg : commands.vspipe_video) {
-			if (arg == "-") {
-				arg = video_pipe_name;
-			}
-		}
-
-		// replace vspipe audio placeholder
-		if (audio) {
-			for (auto& arg : commands.vspipe_audio) {
-				if (arg == "-") {
-					arg = audio_pipe_name;
-				}
-			}
-		}
-
-		// replace ffmpeg placeholders
-		for (auto& arg : commands.ffmpeg) {
-			if (audio && arg == "{audio_pipe}") {
-				arg = audio_pipe_name;
-			}
-			else if (arg == "{video_pipe}") {
-				arg = video_pipe_name;
-			}
-		}
-
-		if (debug) {
-			DEBUG_LOG("VSPipe video: {} {}", blur.vspipe_path, u::join(commands.vspipe_video, " "));
-			if (audio) {
-				DEBUG_LOG("VSPipe audio: {} {}", blur.vspipe_path, u::join(commands.vspipe_audio, " "));
-			}
-			DEBUG_LOG("FFmpeg: {} {}", blur.ffmpeg_path, u::join(commands.ffmpeg, " "));
-		}
-
-#ifndef _WIN32
-		// Start FFmpeg process reading from named pipes
-		auto ffmpeg_process = u::run_command(blur.ffmpeg_path, commands.ffmpeg, env, bp::std_err > ffmpeg_stderr);
-#endif
-
-		// Start VSPipe processes writing to named pipes
-		auto vspipe_process = u::run_command(blur.vspipe_path, commands.vspipe_video, env, bp::std_err > vspipe_stderr);
-
-		bp::child vspipe_audio_process;
-		if (audio) {
-#ifdef _WIN32
-			vspipe_audio_process =
-				u::run_command(blur.vspipe_path, commands.vspipe_audio, env, bp::std_err > vspipe_audio_stderr);
-#else
-			vspipe_audio_process =
-				u::run_command(blur.vspipe_path, commands.vspipe_audio, env, bp::std_err > vspipe_audio_stderr);
-#endif
-		}
-
 		std::ostringstream vspipe_errors;
-		std::ostringstream vspipe_audio_errors;
 		std::ostringstream ffmpeg_errors;
 
-#ifdef _WIN32
-		bool vspipe_ready = false;
-		bool vspipe_audio_ready = false;
+#ifndef _DEBUG
+		if (debug)
 #endif
+		{
+			DEBUG_LOG("VSPipe video: {} {}", blur.vspipe_path, u::join(commands.vspipe_video, " "));
+			DEBUG_LOG("FFmpeg: {} {}", blur.ffmpeg_path, u::join(commands.ffmpeg, " "));
+		}
 
 		std::thread vspipe_stderr_thread([&]() {
 			std::string line;
@@ -469,22 +260,18 @@ tl::expected<rendering::detail::PipelineResult, rendering::RenderError> renderin
 			}
 		});
 
-#ifdef _WIN32
-		while (!vspipe_ready || !vspipe_audio_ready) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-		}
+		auto vspipe_process = u::run_command(
+			blur.vspipe_path, commands.vspipe_video, env, bp::std_out > vspipe_stdout, bp::std_err > vspipe_stderr
+		);
 
-		// pipes are waiting for clients, time for ffmpeg to connect
-		auto ffmpeg_process = u::run_command(blur.ffmpeg_path, commands.ffmpeg, env, bp::std_err > ffmpeg_stderr);
-#endif
+		auto ffmpeg_process = u::run_command(
+			blur.ffmpeg_path, commands.ffmpeg, env, bp::std_err > ffmpeg_stderr, bp::std_in < vspipe_stdout
+		);
 
 		bool killed = false;
 		while (ffmpeg_process.running()) {
 			if (state->m_to_stop) {
 				vspipe_process.terminate();
-				if (audio && vspipe_audio_process) {
-					vspipe_audio_process.terminate();
-				}
 				ffmpeg_process.terminate();
 				killed = true;
 				break;
@@ -500,9 +287,6 @@ tl::expected<rendering::detail::PipelineResult, rendering::RenderError> renderin
 
 		// stop stuff if they're stuck
 		vspipe_process.terminate();
-		if (audio && vspipe_audio_process) {
-			vspipe_audio_process.terminate();
-		}
 
 		// wait for threads to finish
 		if (ffmpeg_stderr_thread.joinable())
@@ -511,32 +295,13 @@ tl::expected<rendering::detail::PipelineResult, rendering::RenderError> renderin
 		if (vspipe_stderr_thread.joinable())
 			vspipe_stderr_thread.join();
 
-		if (audio && vspipe_audio_stderr_thread && vspipe_audio_stderr_thread->joinable())
-			vspipe_audio_stderr_thread->join();
-
-		// Clean up named pipes
-#ifndef _WIN32
-		unlink(video_pipe_name.c_str());
-		if (audio && !audio_pipe_name.empty()) {
-			unlink(audio_pipe_name.c_str());
-		}
-#endif
-
 		if (killed)
 			return PipelineResult{ .stopped = true };
 
-		bool vspipe_video_failed = vspipe_process.exit_code() != 0;
-		bool vspipe_audio_failed = audio && vspipe_audio_process.exit_code() != 0;
-		bool ffmpeg_failed = ffmpeg_process.exit_code() != 0;
-
-		if ((!commands.vspipe_will_stop_early && (vspipe_video_failed || vspipe_audio_failed)) || ffmpeg_failed) {
+		if (ffmpeg_process.exit_code() != 0) {
 			std::string process_errors;
 			if (!vspipe_errors.str().empty()) {
 				process_errors += "--- [vspipe] ---\n" + vspipe_errors.str() + "\n";
-			}
-
-			if (audio && !vspipe_audio_errors.str().empty()) {
-				process_errors += "--- [vspipe audio] ---\n" + vspipe_audio_errors.str() + "\n";
 			}
 
 			if (!ffmpeg_errors.str().empty()) {
@@ -610,8 +375,7 @@ tl::expected<rendering::RenderResult, std::variant<std::string, rendering::Rende
 		return tl::unexpected(output_path.error());
 
 	RenderCommands commands = {
-		.vspipe_video = detail::build_vspipe_args(input_path, *merged_settings, true),
-		.vspipe_audio = detail::build_vspipe_args(input_path, *merged_settings, false),
+		.vspipe_video = detail::build_vspipe_args(input_path, *merged_settings),
 		.ffmpeg = {
 			"-loglevel",
 			"error",
@@ -621,7 +385,7 @@ tl::expected<rendering::RenderResult, std::variant<std::string, rendering::Rende
 			"00:00:00.200",
 			"-y",
 			"-i",
-			"{video_pipe}",
+			"-",
 			"-map",
 			"0:v",
 			"-vframes",
@@ -631,7 +395,6 @@ tl::expected<rendering::RenderResult, std::variant<std::string, rendering::Rende
 			"-y",
 			output_path->string(),
 		},
-		.vspipe_will_stop_early = true,
 	};
 
 	auto pipeline_result = detail::execute_pipeline(commands, state, settings.advanced.debug, false, nullptr);
@@ -655,6 +418,7 @@ tl::expected<rendering::RenderResult, std::variant<std::string, rendering::Rende
 	) {
 	if (!blur.initialised)
 		return tl::unexpected("Blur not initialised");
+
 	if (!std::filesystem::exists(input_path))
 		return tl::unexpected("Input path does not exist");
 
@@ -690,12 +454,22 @@ tl::expected<rendering::RenderResult, std::variant<std::string, rendering::Rende
 		u::log("Rendered at {:.2f} speed with crf {}", settings.output_timescale, settings.quality);
 	}
 
-	// build vspipe command with video info
-	auto vspipe_args = detail::build_vspipe_args(input_path, *merged_settings, true);
+	// compute cut points
+	double abs_start_time = video_info.video_start_time + (start * video_info.duration);
+	double abs_end_time = video_info.video_start_time + (end * video_info.duration);
+
+	auto start_frame = static_cast<size_t>(
+		((abs_start_time - video_info.video_start_time) * video_info.fps_num / video_info.fps_den) + 0.5
+	);
+	auto end_frame = static_cast<size_t>(
+		((abs_end_time - video_info.video_start_time) * video_info.fps_num / video_info.fps_den) + 0.5
+	);
+
+	// build vspipe command
+	auto vspipe_args = detail::build_vspipe_args(input_path, *merged_settings);
 	vspipe_args.insert(
 		vspipe_args.end() - 2,
 		{
-			// insert before script path and "-"
 			"-a",
 			std::format("fps_num={}", video_info.fps_num),
 			"-a",
@@ -703,75 +477,142 @@ tl::expected<rendering::RenderResult, std::variant<std::string, rendering::Rende
 			"-a",
 			"color_range=" + (video_info.color_range ? *video_info.color_range : "undefined"),
 			"-a",
-			std::format("start={}", start),
+			std::format("start={}", start_frame),
 			"-a",
-			std::format("end={}", end),
-			"-a",
-			std::format("has_audio={}", video_info.has_audio_stream),
+			std::format("end={}", end_frame),
 		}
 	);
 
-	std::vector<std::string> vspipe_audio_args;
-
-	if (video_info.has_audio_stream) {
-		vspipe_audio_args = detail::build_vspipe_args(input_path, *merged_settings, false);
-		vspipe_audio_args.insert(
-			vspipe_audio_args.end() - 2,
-			{
-				// insert before script path and "-"
-				"-a",
-				std::format("fps_num={}", video_info.fps_num),
-				"-a",
-				std::format("fps_den={}", video_info.fps_den),
-				"-a",
-				"color_range=" + (video_info.color_range ? *video_info.color_range : "undefined"),
-				"-a",
-				std::format("start={}", start),
-				"-a",
-				std::format("end={}", end),
-			}
-		);
-	}
-
 	// build ffmpeg command
 	std::vector<std::string> ffmpeg_args = {
-		"-loglevel", "error", "-hide_banner", "-stats", "-y", "-fflags", "+genpts", "-i", "{video_pipe}",
+		"-loglevel",
+		"error",
+		"-hide_banner",
+		"-stats",
+		"-y",
+		"-fflags",
+		"+genpts",
+		"-i",
+		"-",
+		"-i",
+		u::path_to_string(input_path),
+		"-map",
+		"0:v",
 	};
 
-	if (video_info.has_audio_stream) {
-		ffmpeg_args.insert(
-			ffmpeg_args.end(),
-			{
-				"-i",
-				"{audio_pipe}",
-				"-map",
-				"0:v",
-				"-map",
-				"1:a",
+	if (!video_info.audio_sample_rates.empty()) {
+		std::string complex_filter;
+		for (size_t i = 0; i < video_info.audio_sample_rates.size(); i++) {
+			if (i > 0)
+				complex_filter += ";";
+
+			// @todo: i still dont know if audio will be perfectly synced but it seems like an endless rabbit hole
+			int sample_rate = video_info.audio_sample_rates[i];
+			double audio_start_time = video_info.audio_start_times[i];
+			double frame_duration = static_cast<double>(video_info.fps_den) / video_info.fps_num;
+
+			auto start_sample = static_cast<size_t>(
+				((start_frame * frame_duration + video_info.video_start_time - audio_start_time) * sample_rate) + 0.5
+			);
+			auto end_sample = static_cast<size_t>(
+				((end_frame * frame_duration + video_info.video_start_time - audio_start_time) * sample_rate) + 0.5
+			);
+
+			// build the middle part of the filter - everything between asetpts and the output label
+			std::string timescale_filter;
+			if (settings.timescale) {
+				float speed = settings.output_timescale / settings.input_timescale;
+
+				if (settings.output_timescale_audio_pitch) {
+					int shifted_rate = static_cast<int>(std::round(sample_rate * speed));
+					timescale_filter = std::format(",asetrate={},aresample={}", shifted_rate, sample_rate);
+				}
+				else {
+					std::string atempo;
+					float s = std::clamp(speed, 0.25f, 100.f);
+					while (s > 2.0f) {
+						atempo += "atempo=2.0,";
+						s /= 2.0f;
+					}
+					while (s < 0.5f) {
+						atempo += "atempo=0.5,";
+						s /= 0.5f;
+					}
+					atempo += std::format("atempo={:.6f}", s);
+					timescale_filter = "," + atempo;
+				}
 			}
-		);
+
+			complex_filter += std::format(
+				"[1:a:{}]atrim=start_pts={}:end_pts={},asetpts=PTS-STARTPTS{}[a{}]",
+				i,
+				start_sample,
+				end_sample,
+				timescale_filter,
+				i
+			);
+		}
+
+		ffmpeg_args.insert(ffmpeg_args.end(), { "-filter_complex", complex_filter });
+
+		for (size_t i = 0; i < video_info.audio_sample_rates.size(); i++) {
+			ffmpeg_args.insert(ffmpeg_args.end(), { "-map", std::format("[a{}]", i) });
+		}
+	}
+
+	// colour fixes
+	std::vector<std::string> params;
+
+	if (video_info.color_range) {
+		std::string range = *video_info.color_range == "pc" ? "full" : "limited";
+		params.emplace_back("range=" + range);
+	}
+
+	if (video_info.color_space)
+		params.emplace_back("colorspace=" + *video_info.color_space);
+
+	if (video_info.color_transfer)
+		params.emplace_back("color_trc=" + *video_info.color_transfer);
+
+	if (video_info.color_primaries)
+		params.emplace_back("color_primaries=" + *video_info.color_primaries);
+
+	if (!params.empty()) {
+		std::string filter =
+			"setparams=" +
+			std::accumulate(
+				std::next(params.begin()), params.end(), params[0], [](const std::string& a, const std::string& b) {
+					return a + ":" + b;
+				}
+			);
+
+		ffmpeg_args.insert(ffmpeg_args.end(), { "-vf", filter });
+
+		if (video_info.pix_fmt) {
+			ffmpeg_args.insert(ffmpeg_args.end(), { "-pix_fmt", *video_info.pix_fmt });
+		}
+	}
+
+	// encoding args
+	if (!settings.advanced.ffmpeg_override.empty()) {
+		auto args = u::ffmpeg_string_to_args(settings.advanced.ffmpeg_override);
+		for (const auto& arg : args) {
+			ffmpeg_args.push_back(arg);
+		}
 	}
 	else {
-		ffmpeg_args.insert(
-			ffmpeg_args.end(),
-			{
-				"-map",
-				"0:v",
-			}
+		auto preset_args = config_presets::get_preset_params(
+			settings.gpu_encoding ? app_settings.gpu_type : "cpu",
+			u::to_lower(settings.encode_preset.empty() ? "h264" : settings.encode_preset),
+			settings.quality
 		);
+
+		for (const auto& arg : preset_args) {
+			ffmpeg_args.push_back(arg);
+		}
+
+		ffmpeg_args.insert(ffmpeg_args.end(), { "-c:a", "aac", "-b:a", "320k", "-movflags", "+faststart" });
 	}
-
-	// add color metadata
-	auto color_args = detail::build_color_metadata_args(video_info);
-	ffmpeg_args.insert(ffmpeg_args.end(), color_args.begin(), color_args.end());
-
-	// add audio filters
-	auto audio_args = detail::build_audio_filter_args(settings, video_info);
-	ffmpeg_args.insert(ffmpeg_args.end(), audio_args.begin(), audio_args.end());
-
-	// add encoding settings
-	auto encoding_args = detail::build_encoding_args(settings, app_settings);
-	ffmpeg_args.insert(ffmpeg_args.end(), encoding_args.begin(), encoding_args.end());
 
 	ffmpeg_args.push_back(u::path_to_string(output_path));
 
@@ -805,14 +646,10 @@ tl::expected<rendering::RenderResult, std::variant<std::string, rendering::Rende
 
 	RenderCommands commands = {
 		.vspipe_video = vspipe_args,
-		.vspipe_audio = vspipe_audio_args,
 		.ffmpeg = ffmpeg_args,
-		.vspipe_will_stop_early = false,
 	};
 
-	auto pipeline_result = detail::execute_pipeline(
-		commands, state, settings.advanced.debug, video_info.has_audio_stream, progress_callback
-	);
+	auto pipeline_result = detail::execute_pipeline(commands, state, settings.advanced.debug, true, progress_callback);
 	if (!pipeline_result)
 		return tl::unexpected(pipeline_result.error());
 

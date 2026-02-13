@@ -452,7 +452,6 @@ namespace u {
 
 	struct VideoInfo {
 		bool has_video_stream = false;
-		bool has_audio_stream = false;
 		std::optional<std::string> color_range;
 		std::optional<std::string> pix_fmt;
 		std::optional<std::string> color_space;
@@ -464,6 +463,11 @@ namespace u {
 		float duration = 0.f;
 		int width = -1;
 		int height = -1;
+
+		std::vector<int> audio_sample_rates;
+
+		double video_start_time = 0.0;
+		std::vector<double> audio_start_times;
 
 		bool operator==(const VideoInfo& other) const = default;
 	};

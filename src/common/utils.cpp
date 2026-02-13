@@ -283,11 +283,9 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 		{
 			"-v",
 			"error",
-			"-select_streams",
-			"v:0", // only want to analyse first video stream
 			"-show_entries",
 			// clang-format off
-			"stream=codec_type,duration,color_range,sample_rate,r_frame_rate,pix_fmt,color_space,color_transfer,color_primaries,width,height",
+			"stream=index,codec_type,sample_rate,color_range,r_frame_rate,pix_fmt,color_space,color_transfer,color_primaries,width,height,start_time",
 			// clang-format on
 			"-show_entries",
 			"format=duration",
@@ -302,93 +300,82 @@ u::VideoInfo u::get_video_info(const std::filesystem::path& path) {
 	VideoInfo info;
 
 	std::string line;
+	std::string current_codec_type;
+	size_t video_index = -1;
+
 	while (pipe_stream && std::getline(pipe_stream, line)) {
 		boost::algorithm::trim(line);
 
-		if (line.find("codec_type=video") != std::string::npos) {
-			// note: this also counts images as videos, so blur can be used on images.
-			// i'll call it a feature, not a bug.
-			info.has_video_stream = true;
-		}
-		else if (line.find("duration=") != std::string::npos) {
-			try {
-				info.duration = std::stod(line.substr(line.find('=') + 1));
+		DEBUG_LOG("[ffprobe] {}", line);
+
+		auto eq = line.find('=');
+		if (eq == std::string::npos)
+			continue;
+
+		std::string key = line.substr(0, eq);
+		std::string value = line.substr(eq + 1);
+
+		if (key == "codec_type") {
+			current_codec_type = value;
+
+			if (value == "video") {
+				info.has_video_stream = true;
+				video_index++;
 			}
-			catch (...) {
-				info.duration = 0.0;
+
+			continue;
+		}
+
+		if (key == "duration") {
+			info.duration = std::stod(value);
+			continue;
+		}
+
+		if (current_codec_type == "video") {
+			if (video_index != 0)
+				continue;
+
+			if (key == "color_range") {
+				info.color_range = value;
+			}
+			else if (key == "pix_fmt") {
+				info.pix_fmt = value;
+			}
+			else if (key == "color_space") {
+				info.color_space = value;
+			}
+			else if (key == "color_transfer") {
+				info.color_transfer = value;
+			}
+			else if (key == "color_primaries") {
+				info.color_primaries = value;
+			}
+			else if (key == "r_frame_rate") {
+				auto fps = u::split_string(value, "/");
+				info.fps_num = std::stoi(fps[0]);
+				info.fps_den = std::stoi(fps[1]);
+			}
+			else if (key == "width") {
+				info.width = std::stoi(value);
+			}
+			else if (key == "height") {
+				info.height = std::stoi(value);
+			}
+			else if (key == "start_time") {
+				info.video_start_time = std::stod(value);
 			}
 		}
-		else if (line.find("color_range=") != std::string::npos) {
-			info.color_range = line.substr(line.find('=') + 1);
-		}
-		else if (line.find("pix_fmt=") != std::string::npos) {
-			info.pix_fmt = line.substr(line.find('=') + 1);
-		}
-		else if (line.find("color_space=") != std::string::npos) {
-			info.color_space = line.substr(line.find('=') + 1);
-		}
-		else if (line.find("color_transfer=") != std::string::npos) {
-			info.color_transfer = line.substr(line.find('=') + 1);
-		}
-		else if (line.find("color_primaries=") != std::string::npos) {
-			info.color_primaries = line.substr(line.find('=') + 1);
-		}
-		else if (line.find("sample_rate=") != std::string::npos) {
-			info.sample_rate = std::stoi(line.substr(line.find('=') + 1));
-		}
-		else if (line.find("r_frame_rate=") != std::string::npos) {
-			std::string frame_rate_str = line.substr(line.find('=') + 1);
-			auto fps_split = u::split_string(frame_rate_str, "/");
-			if (fps_split.size() == 2) {
-				info.fps_num = std::stoi(fps_split[0]);
-				info.fps_den = std::stoi(fps_split[1]);
+		else if (current_codec_type == "audio") {
+			if (key == "sample_rate") {
+				info.audio_sample_rates.push_back(std::stoi(value));
 			}
-			else {
-				// todo: throw? what??
+			else if (key == "start_time") {
+				info.audio_start_times.push_back(std::stod(value));
 			}
-		}
-		else if (line.find("width=") != std::string::npos) {
-			info.width = std::stoi(line.substr(line.find('=') + 1));
-		}
-		else if (line.find("height=") != std::string::npos) {
-			info.height = std::stoi(line.substr(line.find('=') + 1));
 		}
 	}
 
 	c.wait();
-
-	// second ffprobe run for audio (maybe not the 'fastest' way of doing this, but cleaner than doing it all at once)
-	bp::ipstream audio_pipe_stream;
-
-	auto audio_c = u::run_command(
-		blur.ffprobe_path,
-		{
-			"-v",
-			"error",
-			"-select_streams",
-			"a:0",
-			"-show_entries",
-			"stream=codec_type",
-			"-of",
-			"default=noprint_wrappers=1",
-			u::path_to_string(path),
-		},
-		bp::std_out > audio_pipe_stream,
-		bp::std_err.null()
-	);
-
-	while (audio_pipe_stream && std::getline(audio_pipe_stream, line)) {
-		boost::algorithm::trim(line);
-		if (line.find("codec_type=audio") != std::string::npos) {
-			info.has_audio_stream = true;
-		}
-	}
-
-	audio_c.wait();
-
-	if (info.sample_rate == -1) {
-		// todo: throw?
-	}
 
 	return info;
 }

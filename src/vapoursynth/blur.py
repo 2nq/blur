@@ -4,7 +4,6 @@ from vapoursynth import core
 import sys
 import json
 from pathlib import Path
-from fractions import Fraction
 
 # add blur.py folder to path so it can reference scripts
 sys.path.insert(1, str(Path(__file__).parent))
@@ -52,8 +51,6 @@ try:
     fps_num = vars().get("fps_num", -1)
     fps_den = vars().get("fps_den", -1)
     color_range = vars().get("color_range", "")
-
-    has_audio = vars().get("has_audio", "true") == "true"
 
     # validate some settings
     svp_interpolation_algorithm = u.coalesce(
@@ -104,6 +101,12 @@ try:
         orig_height=video.height,
         resize_chromaloc=resize_chromaloc,
     )
+
+    # trimming
+    start = int(vars().get("start", 0))
+    end = int(vars().get("end", video.num_frames))
+
+    video = video[start:end]
 
     # input timescale
     if settings["timescale"]:
@@ -349,56 +352,7 @@ try:
             height=HEIGHT_4K,
         )
 
-    start = float(vars().get("start", 0.0))
-    end = float(vars().get("end", 1.0))
-
-    # clamp
-    start = max(0.0, min(1.0, start))
-    end = max(0.0, min(1.0, end))
-
-    # trimming
-    v_start = 0
-    v_end = video.num_frames
-
-    if start != 0:
-        v_start = int(video.num_frames * start)
-
-    if end != 1:
-        v_end = int(video.num_frames * end)
-
-        # @note:extra-frame add an extra frame. in the preview, visually it seems like the end point is included in the cut.
-        v_end = min(v_end + 1, video.num_frames)
-
-    # safety, need to have at least one frame
-    if v_end <= v_start:
-        v_end = v_start + 1
-
-    video = video[v_start:v_end]
-    video.set_output(0)
-
-    # audio
-    if has_audio:
-        # TODO: multiple audio stream support?
-        audio = core.bs.AudioSource(source=video_path, cachemode=0)
-
-        a_start = None
-        a_end = None
-
-        # trimming
-        fps = Fraction(video.fps.numerator, video.fps.denominator)
-
-        if v_start is not None:
-            # TODO MR: make sure this is exactly synced
-            time_start = Fraction(v_start) / fps
-            a_start = int(time_start * audio.sample_rate)
-
-        if v_end is not None:
-            # TODO MR: make sure this is exactly synced
-            time_end = Fraction(v_end) / fps
-            a_end = int(time_end * audio.sample_rate)
-
-        audio = audio[a_start:a_end]
-        audio.set_output(1)
+    video.set_output()
 except u.BlurException as e:
     u.handle_blur_exception(e)
 except Exception as e:

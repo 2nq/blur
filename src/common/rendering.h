@@ -4,10 +4,7 @@
 
 struct RenderCommands {
 	std::vector<std::string> vspipe_video;
-	std::vector<std::string> vspipe_audio;
 	std::vector<std::string> ffmpeg;
-	bool vspipe_will_stop_early; // for frame renders, stopping early is expected, so using this to selectively ignore
-	                             // vspipe response code not being 0
 };
 
 namespace rendering {
@@ -27,7 +24,7 @@ namespace rendering {
 		void resume(int pid, const std::shared_ptr<RenderState>& state);
 
 		tl::expected<PipelineResult, RenderError> execute_pipeline(
-			RenderCommands commands,
+			const RenderCommands& commands,
 			const std::shared_ptr<RenderState>& state,
 			bool debug,
 			bool audio,
@@ -100,7 +97,7 @@ namespace rendering {
 		friend void detail::resume(int pid, const std::shared_ptr<RenderState>& state);
 
 		friend tl::expected<detail::PipelineResult, RenderError> detail::execute_pipeline(
-			RenderCommands commands,
+			const RenderCommands& commands,
 			const std::shared_ptr<RenderState>& state,
 			bool debug,
 			bool audio,
@@ -160,7 +157,7 @@ namespace rendering {
 		);
 
 		std::vector<std::string> build_vspipe_args(
-			const std::filesystem::path& input_path, const nlohmann::json& merged_settings, bool is_video
+			const std::filesystem::path& input_path, const nlohmann::json& merged_settings
 		);
 
 		boost::process::native_environment setup_environment();
@@ -171,14 +168,6 @@ namespace rendering {
 
 		tl::expected<std::filesystem::path, std::string> build_output_filename(
 			const std::filesystem::path& input_path, const BlurSettings& settings, const GlobalAppSettings& app_settings
-		);
-
-		std::vector<std::string> build_color_metadata_args(const u::VideoInfo& video_info);
-
-		std::vector<std::string> build_audio_filter_args(const BlurSettings& settings, const u::VideoInfo& video_info);
-
-		std::vector<std::string> build_encoding_args(
-			const BlurSettings& settings, const GlobalAppSettings& app_settings
 		);
 
 		void copy_file_timestamp(const std::filesystem::path& from, const std::filesystem::path& to);
