@@ -204,6 +204,8 @@ def with_format(
                 # here im just making educated guesses as to what they are but this is so dumb
                 props = dict(video.get_frame(0).props)
 
+                print("guessing video props. original props:", props)
+
                 set_props = {}
 
                 if props.get("_Matrix", 0) in {0, vs.MATRIX_UNSPECIFIED}:
@@ -221,7 +223,7 @@ def with_format(
             if video_info.resize_chromaloc is not None:
                 convert_kwargs["chromaloc_s"] = video_info.resize_chromaloc
 
-            print(convert_kwargs)
+            print("conversion kwargs", convert_kwargs)
 
             video = core.resize.Point(video, **convert_kwargs)
     except BlurException:
@@ -244,6 +246,8 @@ def with_format(
 
             if target_format == vs.RGBS and orig_format.color_family == vs.YUV:
                 convert_back_kwargs["matrix_s"] = "709"
+
+            print("conversion back kwargs", convert_back_kwargs)
 
             video = core.resize.Point(video, **convert_back_kwargs)
 
