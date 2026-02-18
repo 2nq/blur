@@ -416,6 +416,7 @@ tl::expected<RenderResult, std::string> Render::do_render(RenderCommands render_
 		if (blur.used_installer) {
 			env["PYTHONHOME"] = (blur.resources_path / "python").native();
 			env["PYTHONPATH"] = (blur.resources_path / "python/lib/python3.12/site-packages").native();
+			env["VK_ICD_FILENAMES"] = (blur.resources_path / "vulkan/icd.d/MoltenVK_icd.json").native();
 		}
 #endif
 

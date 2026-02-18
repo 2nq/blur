@@ -262,9 +262,57 @@ download_model_files \
 
 echo "Model downloads completed"
 
-echo "done"
+echo "bundling MoltenVK..."
+
+MOLTENVK_PREFIX="$(brew --prefix molten-vk)"
+
+MOLTENVK_DEST="$out_dir/libs"
+ICD_DEST="$out_dir/vulkan/icd.d"
+MOLTENVK_JSON_SRC="$MOLTENVK_PREFIX/etc/vulkan/icd.d/MoltenVK_icd.json"
+MOLTENVK_SRC="$MOLTENVK_PREFIX/lib/libMoltenVK.dylib"
+
+mkdir -p "$MOLTENVK_DEST"
+mkdir -p "$ICD_DEST"
+
+if [ ! -f "$MOLTENVK_SRC" ]; then
+  echo "ERROR: MoltenVK not found at $MOLTENVK_SRC"
+  exit 1
+fi
+
+if [ ! -f "$MOLTENVK_JSON_SRC" ]; then
+  echo "ERROR: MoltenVK ICD JSON not found at $MOLTENVK_JSON_SRC"
+  exit 1
+fi
+
+echo "Copying libMoltenVK.dylib..."
+cp "$MOLTENVK_SRC" "$MOLTENVK_DEST/"
+
+# fix install name to be relative
+install_name_tool -id "@rpath/libMoltenVK.dylib" \
+  "$MOLTENVK_DEST/libMoltenVK.dylib"
+
+echo "copying and patching MoltenVK_icd.json..."
+
+cp "$MOLTENVK_JSON_SRC" "$ICD_DEST/MoltenVK_icd.json"
+
+# Patch only library_path using jq
+jq '.ICD.library_path = "../../libs/libMoltenVK.dylib"' \
+  "$ICD_DEST/MoltenVK_icd.json" > \
+  "$ICD_DEST/MoltenVK_icd.json.tmp"
+
+mv "$ICD_DEST/MoltenVK_icd.json.tmp" \
+   "$ICD_DEST/MoltenVK_icd.json"
+
+echo "MoltenVK bundled successfully"
+
+echo "fixing dylib permissions..."
+chmod -R u+rwX,go+rX "$out_dir/libs"
 
 echo "fixing all library dependencies with dylibbundler..."
+
+dylibbundler -cd -b -of \
+  -x "$MOLTENVK_DEST/libMoltenVK.dylib" \
+  -d "$out_dir/libs"
 
 for plugin in $out_dir/vapoursynth-plugins/*.dylib; do
   dylibbundler -cd -b -of -x "$plugin" -d "$out_dir/libs"
@@ -272,3 +320,5 @@ done
 
 dylibbundler -cd -b -of -x "$out_dir/vapoursynth/vspipe" -d "$out_dir/libs"
 dylibbundler -cd -b -of -x "$out_dir/python/lib/python3.12/site-packages/vapoursynth.so" -d "$out_dir/libs"
+
+echo "done"

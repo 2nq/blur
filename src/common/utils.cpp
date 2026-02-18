@@ -484,6 +484,7 @@ std::map<int, std::string> u::get_rife_gpus() {
 	if (blur.used_installer) {
 		env["PYTHONHOME"] = (blur.resources_path / "python").native();
 		env["PYTHONPATH"] = (blur.resources_path / "python/lib/python3.12/site-packages").native();
+		env["VK_ICD_FILENAMES"] = (blur.resources_path / "vulkan/icd.d/MoltenVK_icd.json").native();
 	}
 #endif
 
@@ -560,6 +561,7 @@ int u::get_fastest_rife_gpu_index(
 		if (blur.used_installer) {
 			env["PYTHONHOME"] = (blur.resources_path / "python").native();
 			env["PYTHONPATH"] = (blur.resources_path / "python/lib/python3.12/site-packages").native();
+			env["VK_ICD_FILENAMES"] = (blur.resources_path / "vulkan/icd.d/MoltenVK_icd.json").native();
 		}
 #endif
 
