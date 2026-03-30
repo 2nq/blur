@@ -31,9 +31,9 @@ std::vector<std::string> rendering::detail::build_vspipe_args(
 #ifdef __APPLE__
 	args.insert(args.end(), { "-a", std::format("macos_bundled={}", blur.used_installer ? "true" : "false") });
 #endif
-// #ifdef _WIN32
-// 	args.insert(args.end(), { "-a", "enable_lsmash=true" });
-// #endif
+#ifdef _WIN32
+	args.insert(args.end(), { "-a", "enable_lsmash=true" });
+#endif
 #ifdef __linux__
 	bool bundled = std::filesystem::exists(blur.resources_path / "vapoursynth-plugins");
 	args.insert(args.end(), { "-a", std::format("linux_bundled={}", bundled ? "true" : "false") });
